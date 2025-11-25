@@ -237,16 +237,16 @@ text_configs:
       position: [0, 0]
       font_color: [255, 255, 255]
       font_size: 1
-  zxh:
-    - text: 占
+  warden:
+    - text: 典
       position: [ 759, 63 ]
       font_color: [ 195, 209, 231 ]
       font_size: 196
-    - text: 湘
+    - text: 狱
       position: [ 948, 175 ]
       font_color: [ 255, 255, 255 ]
       font_size: 92
-    - text: 晖
+    - text: 长
       position: [ 1053, 117 ]
       font_color: [ 255, 255, 255 ]
       font_size: 147

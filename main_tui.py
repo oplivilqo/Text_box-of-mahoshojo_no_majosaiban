@@ -1,5 +1,4 @@
-"""适用于 macOS 的 Textual UI 版本"""
-
+""" Textual UI 版本"""
 import random
 import time
 from pynput.keyboard import Key, Controller, GlobalHotKeys
@@ -19,42 +18,48 @@ from text_fit_draw import draw_text_auto
 from image_fit_paste import paste_image_auto
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical, ScrollableContainer
-from textual.widgets import Header, Footer, Button, RadioSet, RadioButton, Label, ProgressBar
+from textual.widgets import Header, Footer, RadioSet, RadioButton, Label, ProgressBar
 from textual.binding import Binding
 from textual.reactive import reactive
 
 PLATFORM = platform.lower()
-if PLATFORM == "windows":
+
+if PLATFORM.startswith('win'):
     try:
         import win32clipboard
+        import keyboard
     except ImportError:
-        print("[red]请先安装 pywin32 库: pip install pywin32[/red]")
+        print("[red]请先安装 Windows 运行库: pip install pywin32 keyboard[/red]")
         raise
+
 
 class ManosabaTextBox:
     def __init__(self):
         # 常量定义
-        self.BOX_RECT = ((728, 355), (2339, 800))
-        self.KEY_DELAY = 0.1
-        self.AUTO_PASTE_IMAGE = True
-        self.AUTO_SEND_IMAGE = True
+        self.BOX_RECT = ((728, 355), (2339, 800))  # 文本框区域坐标
+        self.KEY_DELAY = 0.1  # 按键延迟
+        self.AUTO_PASTE_IMAGE = True  # 自动粘贴图片
+        self.AUTO_SEND_IMAGE = True  # 自动发送图片
 
-        self.kbd_controller = Controller()
+        self.kbd_controller = Controller()  # 键盘控制器
 
-        self.BASE_PATH = ""
-        self.CONFIG_PATH = ""
-        self.ASSETS_PATH = ""
-        self.CACHE_PATH = ""
+        # 初始化路径
+        self.BASE_PATH = ""  # 基础路径
+        self.CONFIG_PATH = ""  # 配置路径
+        self.ASSETS_PATH = ""  # 资源路径
+        self.CACHE_PATH = ""  # 缓存路径
         self.setup_paths()
 
-        self.mahoshojo = {}
-        self.text_configs_dict = {}
-        self.character_list = []
+        # 加载配置
+        self.mahoshojo = {}  # 角色元数据
+        self.text_configs_dict = {}  # 文本配置字典
+        self.character_list = []  # 角色列表
         self.load_configs()
 
-        self.emote = None
-        self.value_1 = -1
-        self.current_character_index = 3
+        # 状态变量
+        self.emote = None   # 表情索引
+        self.value_1 = -1   # 我也不知道这是啥我也不敢动
+        self.current_character_index = 3    # 当前角色索引，默认第三个角色（sherri）
 
     def setup_paths(self):
         """设置文件路径"""
@@ -65,7 +70,7 @@ class ManosabaTextBox:
         os.makedirs(self.CACHE_PATH, exist_ok=True)
 
     def load_configs(self):
-        """加载配置文件"""
+        """从yaml加载配置文件"""
         with open(os.path.join(self.CONFIG_PATH, "chara_meta.yml"), 'r', encoding="utf-8") as fp:
             config = yaml.safe_load(fp)
             self.mahoshojo = config["mahoshojo"]
@@ -77,17 +82,24 @@ class ManosabaTextBox:
         self.character_list = list(self.mahoshojo.keys())
 
     def get_character(self, index: str | None = None, full_name: bool = False) -> str:
-        """获取当前角色名称"""
+        """
+        获取角色名称
+        Args:
+            index: 角色索引名（不是序号，如果为None则返回当前角色）
+            full_name: 是否返回全名
+        Returns:
+            角色名称 (str)
+        """
         if index is not None:
             return self.mahoshojo[index]['full_name'] if full_name else index
         else:
             chara = self.character_list[self.current_character_index - 1]
             return self.mahoshojo[chara]['full_name'] if full_name else chara
 
-    def switch_character(self, new_index: int) -> bool:
+    def switch_character(self, index: int) -> bool:
         """切换到指定索引的角色"""
-        if 0 < new_index <= len(self.character_list):
-            self.current_character_index = new_index
+        if 0 < index <= len(self.character_list):
+            self.current_character_index = index
             return True
         return False
 
@@ -190,7 +202,7 @@ class ManosabaTextBox:
 
                 if result.returncode != 0:
                     print(f"复制图片到剪贴板失败: {result.stderr.decode()}")
-            elif PLATFORM == 'windows':
+            elif PLATFORM.startswith('win'):
                 # 打开 PNG 字节为 Image
                 image = Image.open(io.BytesIO(png_bytes))
                 # 转换成 BMP 字节流（去掉 BMP 文件头的前 14 个字节）
@@ -259,7 +271,7 @@ class ManosabaTextBox:
         image = self.try_get_image()
 
         if text == "" and image is None:
-            return "错误: 没有文本或图像喵"
+            return "错误: 没有文本或图像"
 
         png_bytes = None
 
@@ -322,65 +334,12 @@ class ManosabaTextBox:
         return f"成功生成图片！角色: {character_name}, 表情: {1 + (self.value_1 // 16)}"
 
 
-class TextBoxApp(App):
-    """魔法少女的魔女裁判文本框生成器 Textual UI"""
+class TextBoxTUI(App):
+    """魔裁文本框生成器 TUI"""
 
-    CSS = """
-    
-    Screen {
-        align: center middle;
-    }
-    
-    #main_container {
-        width: 100%;
-        height: 100%;
-        padding: 1;
-    }
-    
-    #character_panel {
-        width: 1fr;
-        height: 100%;
-        padding: 1;
-    }
-    
-    #emotion_panel {
-        width: 1fr;
-        height: 100%;
-        padding: 1;
-    }
-    
-    #control_panel {
-        width: 100%;
-        height: auto;
-        border: ascii $secondary;
-        padding: 0;
-    }
-    
-    .panel_title {
-        text-style: bold;
-        color: $foreground;
-        margin-bottom: 1;
-    }
-    
-    RadioSet {
-        height: auto;
-    }
-    
-    #status_label {
-        margin-left: 2;
-        color: $accent;
-        text-style: italic;
-    }
-    
-    #progress_bar {
-        margin-top: 1;
-        display: none;
-    }
-    
-    #progress_bar.visible {
-        display: block;
-    }
-    """
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "textual.tcss"),
+              'r',encoding="utf-8") as f:
+        CSS = f.read()
 
     BINDINGS = [
         Binding("ctrl+enter", "generate", "生成图片", priority=False),
@@ -391,26 +350,9 @@ class TextBoxApp(App):
     TITLE = "魔裁 文本框生成器"
     theme = "tokyo-night"
 
-    current_character = reactive("ema")
+    current_character = reactive("sherri")
     current_emotion = reactive(1)
     status_msg = reactive("就绪")
-
-    CHARACTER_NAMES = {
-        "ema": "樱羽艾玛",
-        "hiro": "二阶堂希罗",
-        "sherri": "橘雪莉",
-        "hanna": "远野汉娜",
-        "anan": "夏目安安",
-        "yuki": "月代雪",
-        "meruru": "冰上梅露露",
-        "noa": "城崎诺亚",
-        "reia": "莲见蕾雅",
-        "miria": "佐伯米莉亚",
-        "nanoka": "黑部奈叶香",
-        "mago": "宝生玛格",
-        "alisa": "紫藤亚里沙",
-        "coco": "泽渡可可",
-    }
 
     def __init__(self):
         super().__init__()
@@ -421,13 +363,15 @@ class TextBoxApp(App):
 
     def setup_global_hotkeys(self) -> None:
         """设置全局热键监听器"""
-        hotkeys = {
-            '<ctrl>+<enter>': self.trigger_generate,
-            '<cmd>+<enter>': self.trigger_generate,  # macOS 使用 Cmd
-        }
+        if PLATFORM == "darwin":
+            hotkeys = {
+                '<ctrl>+<enter>': self.trigger_generate
+            }
 
-        self.hotkey_listener = GlobalHotKeys(hotkeys)
-        self.hotkey_listener.start()
+            self.hotkey_listener = GlobalHotKeys(hotkeys)
+            self.hotkey_listener.start()
+        elif PLATFORM.startswith('win'):
+            keyboard.add_hotkey('enter', self.trigger_generate)
 
     def trigger_generate(self) -> None:
         """全局热键触发生成图片（在后台线程中调用）"""
@@ -589,10 +533,10 @@ class TextBoxApp(App):
         # 添加新的按钮
         emotion_cnt = self.textbox.get_current_emotion_count()
         for i in range(1, emotion_cnt + 1):
-            unique_id = f"emotion_{self.current_character}_{i}_{uuid.uuid4().hex[:8]}"
+            unique_id = f"emotion_{self.current_character}_{i}"
             btn = RadioButton(
                 f"表情 {i}",
-                value=(i == 1),  # 始终选中表情 1
+                value=(self.textbox.emote == i),
                 id=unique_id
             )
             emotion_radio.mount(btn)
@@ -602,15 +546,6 @@ class TextBoxApp(App):
         self.status_msg = msg
         status_label = self.query_one("#status_label", Label)
         status_label.update(msg)
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        """按钮点击事件"""
-        if event.button.id == "btn_generate":
-            self.action_generate()
-        elif event.button.id == "btn_delete":
-            self.action_delete_cache()
-        elif event.button.id == "btn_quit":
-            self.action_quit()
 
     def action_generate(self) -> None:
         """生成图片"""
@@ -633,5 +568,5 @@ class TextBoxApp(App):
 
 
 if __name__ == "__main__":
-    app = TextBoxApp()
+    app = TextBoxTUI()
     app.run()
