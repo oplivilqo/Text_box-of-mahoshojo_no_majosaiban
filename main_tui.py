@@ -236,7 +236,7 @@ class ManosabaTextBox:
 
         time.sleep(self.KEY_DELAY)
         new_clip = pyperclip.paste()
-        return new_clip
+        return new_clip.strip()
 
     def try_get_image(self) -> Image.Image | None:
         """尝试从剪贴板获取图像"""
@@ -366,7 +366,7 @@ class TextBoxTUI(App):
         CSS = f.read()
 
     BINDINGS = [
-        Binding("ctrl+enter", "generate", "生成图片", priority=False),
+        Binding("ctrl+e", "generate", "生成图片", priority=False),
         Binding("ctrl+d", "delete_cache", "清除缓存", priority=True),
         Binding("ctrl+q", "quit", "退出", priority=True),
     ]
@@ -395,7 +395,7 @@ class TextBoxTUI(App):
             self.hotkey_listener = GlobalHotKeys(hotkeys)
             self.hotkey_listener.start()
         elif PLATFORM.startswith('win'):
-            keyboard.add_hotkey('enter', self.trigger_generate)
+            keyboard.add_hotkey('ctrl+e', self.trigger_generate)
 
     def trigger_generate(self) -> None:
         """全局热键触发生成图片（在后台线程中调用）"""

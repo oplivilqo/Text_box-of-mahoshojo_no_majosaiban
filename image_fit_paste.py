@@ -3,16 +3,6 @@ from io import BytesIO
 from typing import Tuple, Literal, Union
 from PIL import Image, ImageDraw, ImageFont
 import os
-import sys
-
-# ===== PyInstaller 资源路径处理函数 =====
-def get_resource_path(relative_path):
-    """获取资源文件的绝对路径，兼容开发环境和打包后的环境"""
-    try:
-        base_path = sys._MEIPASS
-    except AttributeError:
-        base_path = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(base_path, relative_path)
 
 Align = Literal["left", "center", "right"]
 VAlign = Literal["top", "middle", "bottom"]
@@ -131,12 +121,12 @@ def paste_image_auto(
         
         for config in text_configs_dict[role_name]:
             text = config["text"]
-            position = config["position"]
-            font_color = config["font_color"]
+            position = tuple(config["position"])
+            font_color = tuple(config["font_color"])
             font_size = config["font_size"]
         
-            # 使用 get_resource_path 获取字体文件路径
-            font_path = get_resource_path("font3.ttf")
+            # 使用绝对路径加载字体文件
+            font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'fonts', "font3.ttf")
             font = ImageFont.truetype(font_path, font_size)
             
             # 计算阴影位置

@@ -7,23 +7,6 @@
 
 <img width="1200" height="390" alt="96038673678af657e937d20617322e81" src="https://github.com/user-attachments/assets/847c331e-9274-4b60-9b42-af0a80265391" />
 
-
-
-
-## 修改说明
-
-本仓库基于oplivilqo的项目二次开发
-
-1.修复了原版生成函数阻塞快捷键识别的bug
-
-2.添加了窗口白名单功能，避免在不需要使用脚本的窗口触发快捷键
-
-3.修复了输出图片时角色名丢失的bug
-
-4.支持系统通用的emoji（TIM由于会自动将输入的emoji变成图片，故暂不支持，QQ未测试）
-
-5.增加了方便的build脚本，生成方式：pyinstaller build_onefile.spec 不知道为啥没办法包含pilemoji库，导致无法生成emoji，建议还是运行py文件
-
 ## 功能特色
 
 - 🎨 多角色支持 - 内置14个角色，每个角色多个表情差分，支持自定义角色导入
@@ -38,7 +21,7 @@
 
 1. 切换角色 - 使用UI选择目标角色和表情
 2. 输入文本 - 在聊天框或文本编辑器中输入想要添加的文本
-3. 生成图片 - 按下 `Enter` 键自动生成并发送
+3. 生成图片 - 按下 `Ctrl+E` 键自动生成并发送
 4. 清理缓存 - 一键清理生成的临时图片
 
 <img width="1203" height="756" alt="image" src="https://github.com/user-attachments/assets/edc38524-f2fd-4c18-8a8d-59f0a0a839bb" />
