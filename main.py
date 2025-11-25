@@ -13,62 +13,15 @@
 #7 新增：快捷键切换角色功能
 #8 新增：限制生成图片大小功能
 
-print("""角色说明:
-1为樱羽艾玛，2为二阶堂希罗，3为橘雪莉，4为远野汉娜
-5为夏目安安，6为月代雪，7为冰上梅露露，8为城崎诺亚，9为莲见蕾雅，10为佐伯米莉亚
-11为黑部奈叶香，12为宝生玛格，13为紫藤亚里沙，14为泽渡可可
-
-快捷键说明:
-Ctrl+1 到 Ctrl+9: 切换角色1-9
-Ctrl+q: 切换角色10
-Ctrl+e: 切换角色11
-Ctrl+r: 切换角色12
-Ctrl+t: 切换角色13
-Ctrl+y: 切换角色14
-Ctrl+0: 显示当前角色
-Alt+1-9: 切换表情1-9(部分角色表情较少 望大家谅解)
-Enter: 生成图片
-Esc: 退出程序
-Ctrl+Tab: 清除图片
-      
-程序说明：
-这个版本的程序占用体积较小，但是需要预加载，初次更换角色后需要等待数秒才能正常使用，望周知（
-按Tab可清除生成图片，降低占用空间，但清除图片后需重启才能正常使用
-感谢各位的支持
-
-改动说明：
-默认启用窗口白名单，只在微信和QQ等聊天窗口前台时才响应热键，避免误触发
-
-"""
-)
-
-
-
-# 角色配置
-# 1为樱羽艾玛，2为二阶堂希罗，3为橘雪莉，4为远野汉娜
-# 5为夏目安安，6为月代雪，7为冰上梅露露，8为城崎诺亚，9为莲见蕾雅，10为佐伯米莉亚
-# 11为黑部奈叶香，12为宝生玛格，13为紫藤亚里沙，14为泽渡可可
-current_character_index = 3  # 初始角色为橘雪莉（索引从0开始）
-
-mahoshojo_postion = [728,355] #文本范围起始位置
-mahoshojo_over = [2339,800]   #文本范围右下角位置
-
-
-
-
-
-
-
-
-
-
+import tkinter as tk
+from tkinter import ttk, messagebox
 import sys
 import random
 import time
 import keyboard
 import pyperclip
 import io
-from PIL import Image
+from PIL import Image, ImageTk
 import win32clipboard
 import os
 import re
@@ -79,6 +32,7 @@ import win32process
 import psutil
 from text_fit_draw import draw_text_auto
 from image_fit_paste import paste_image_auto
+import getpass
 
 # ===== PyInstaller 资源路径处理函数 =====
 def get_resource_path(relative_path):
@@ -92,29 +46,32 @@ def get_resource_path(relative_path):
     
     return os.path.join(base_path, relative_path)
 
+# 全局变量
 i = -1
 value_1 = -1
-expression = None
+expression = 1  # 默认表情为1
+backgroundNum = 1  # 默认背景为1
 
 #前台窗口白名单
 windowwhitelist=["TIM.exe","WeChat.exe","Weixin.exe","WeChatApp.exe","QQ.exe"]
 enablewhitelist=True
+
 # 角色配置字典
 mahoshojo = {
-    "ema": {"emotion_count": 8, "font": "font3.ttf"},     # 樱羽艾玛
-    "hiro": {"emotion_count": 6, "font": "font3.ttf"},    # 二阶堂希罗
-    "sherri": {"emotion_count": 7, "font": "font3.ttf"},  # 橘雪莉
-    "hanna": {"emotion_count": 5, "font": "font3.ttf"},   # 远野汉娜
-    "anan": {"emotion_count": 9, "font": "font3.ttf"},    # 夏目安安
-    "yuki" : {"emotion_count": 18, "font": "font3.ttf"},
-    "meruru": {"emotion_count": 6, "font": "font3.ttf"},   # 冰上梅露露
-    "noa": {"emotion_count": 6, "font": "font3.ttf"},     # 城崎诺亚
-    "reia": {"emotion_count": 7, "font": "font3.ttf"},    # 莲见蕾雅
-    "miria": {"emotion_count": 4, "font": "font3.ttf"},   # 佐伯米莉亚
-    "nanoka": {"emotion_count": 5, "font": "font3.ttf"},  # 黑部奈叶香
-    "mago": {"emotion_count": 5, "font": "font3.ttf"},   # 宝生玛格
-    "alisa": {"emotion_count": 6, "font": "font3.ttf"},   # 紫藤亚里沙
-    "coco": {"emotion_count": 5, "font": "font3.ttf"}
+    "ema": {"emotion_count": 8, "font": "font3.ttf", "name": "樱羽艾玛"},     # 樱羽艾玛
+    "hiro": {"emotion_count": 6, "font": "font3.ttf", "name": "二阶堂希罗"},    # 二阶堂希罗
+    "sherri": {"emotion_count": 7, "font": "font3.ttf", "name": "橘雪莉"},  # 橘雪莉
+    "hanna": {"emotion_count": 5, "font": "font3.ttf", "name": "远野汉娜"},   # 远野汉娜
+    "anan": {"emotion_count": 9, "font": "font3.ttf", "name": "夏目安安"},    # 夏目安安
+    "yuki" : {"emotion_count": 18, "font": "font3.ttf", "name": "月代雪"},
+    "meruru": {"emotion_count": 6, "font": "font3.ttf", "name": "冰上梅露露"},   # 冰上梅露露
+    "noa": {"emotion_count": 6, "font": "font3.ttf", "name": "城崎诺亚"},     # 城崎诺亚
+    "reia": {"emotion_count": 7, "font": "font3.ttf", "name": "莲见蕾雅"},    # 莲见蕾雅
+    "miria": {"emotion_count": 4, "font": "font3.ttf", "name": "佐伯米莉亚"},   # 佐伯米莉亚
+    "nanoka": {"emotion_count": 5, "font": "font3.ttf", "name": "黑部奈叶香"},  # 黑部奈叶香
+    "mago": {"emotion_count": 5, "font": "font3.ttf", "name": "宝生玛格"},   # 宝生玛格
+    "alisa": {"emotion_count": 6, "font": "font3.ttf", "name": "紫藤亚里沙"},   # 紫藤亚里沙
+    "coco": {"emotion_count": 5, "font": "font3.ttf", "name": "泽渡可可"}
 }
 
 # 角色文字配置字典 - 每个角色对应4个文字配置
@@ -204,7 +161,6 @@ text_configs_dict = {
     {"text":"","position":(0,0),"font_color":(255, 255, 255),"font_size":1}
         ]
 }
-import getpass
 
 # 获取当前用户名
 username = getpass.getuser()
@@ -215,14 +171,19 @@ if os.name == 'nt':  # Windows系统
 else:  # 其他系统
     user_documents = os.path.expanduser('~/Documents')
 
-# 构建\"魔裁\"文件夹路径
+# 构建"魔裁"文件夹路径
 magic_cut_folder = os.path.join(user_documents, '魔裁')
 
-# 创建\"魔裁\"文件夹（如果不存在）
+# 创建"魔裁"文件夹（如果不存在）
 os.makedirs(magic_cut_folder, exist_ok=True)
 
-# 角色列表（按顺序对应1-13的角色）
+# 角色列表（按顺序对应1-14的角色）
 character_list = list(mahoshojo.keys())
+
+# 角色配置
+current_character_index = 3  # 初始角色为橘雪莉（索引从1开始）
+mahoshojo_postion = [728,355] #文本范围起始位置
+mahoshojo_over = [2339,800]   #文本范围右下角位置
 
 # 获取当前角色信息
 def get_current_character():
@@ -299,48 +260,6 @@ def get_expression(i):
     if i <= mahoshojo[character_name]["emotion_count"]:
         print(f"已切换至第{i}个表情")
         expression = i
-
-
-# 随机获取表情图片名称
-# 优化版本：使用循环替代递归，避免栈溢出风险
-# 维护上一次选择的表情类型，确保不连续选择相同表情
-def get_random_value():
-    global value_1,expression
-    character_name = get_current_character()
-    emotion_count = get_current_emotion_count()
-    total_images = 16 * emotion_count
-    
-    if expression:
-        i = random.randint((expression-1)*16+1,expression*16)
-        value_1 = i
-        expression = None
-        return f"{character_name} ({i})"
-    
-    
-    # 循环直到找到与上次不同表情的图片
-    max_attempts = 100  # 防止无限循环的安全机制
-    attempts = 0
-    
-    while attempts < max_attempts:
-        i = random.randint(1, total_images)
-        current_emotion = (i-1) // 16
-        
-        # 处理第一次调用的情况
-        if value_1 == -1:
-            value_1 = i
-            return f"{character_name} ({i})"
-        
-        # 检查是否与上次表情不同
-        if current_emotion != (value_1-1) //16:
-            value_1 = i
-            return f"{character_name} ({i})"
-        
-        attempts += 1
-    
-    # 如果尝试多次仍未找到（理论上概率极低），则返回当前随机数
-    # 这是一个安全机制，防止程序卡住
-    value_1 = i
-    return f"{character_name} ({i})"
 
 
 HOTKEY= "enter"
@@ -471,9 +390,11 @@ def Start():
     print("Start generate...")
     
     character_name = get_current_character()
-    address = os.path.join(magic_cut_folder, get_random_value()+".jpg")
+    # 不再使用get_random_value()函数，直接使用expression和backgroundNum构建路径
+    address = os.path.join(magic_cut_folder, f"{get_current_character()} ({(expression-1)*16+backgroundNum})"+".jpg")
     BASEIMAGE_FILE = address
-    print(character_name,str(1+(value_1//16)),"背景",str(value_1%16))
+    # 修改print语句
+    print(character_name,str(expression),"背景",str(backgroundNum))
 
 
 
@@ -570,27 +491,215 @@ def run_start_in_thread():
     # 但为了简化，我们依赖于剪贴板，因为 cut_all_and_get_text 已经更新了它
     threading.Thread(target=Start).start()
 
-# 角色切换快捷键绑定
-# 按Ctrl+1 到 Ctrl+9: 切换角色1-9
-for i in range(1,10):
-    keyboard.add_hotkey(f'ctrl+{i}', lambda idx=i: switch_character(idx))
+# GUI界面类
+class MagicCutGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("魔法少女的魔裁工具")
+        self.root.geometry("800x600")
+        
+        # 创建滚动文本框
+        self.create_intro_text()
+        # 创建选择区域
+        self.create_selection_area()
+        # 创建预览区域
+        self.create_preview_area()
+        
+        # 初始化预览
+        self.update_preview()
+    
+    def create_intro_text(self):
+        """创建开头说明文本区域"""
+        intro_frame = ttk.Frame(self.root)
+        intro_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        intro_label = ttk.Label(intro_frame, text="程序说明：", font=("Arial", 12, "bold"))
+        intro_label.pack(anchor=tk.W)
+        
+        intro_text = """角色说明:
+1为樱羽艾玛，2为二阶堂希罗，3为橘雪莉，4为远野汉娜
+5为夏目安安，6为月代雪，7为冰上梅露露，8为城崎诺亚，9为莲见蕾雅，10为佐伯米莉亚
+11为黑部奈叶香，12为宝生玛格，13为紫藤亚里沙，14为泽渡可可
 
-# 角色10-13使用特殊快捷键
-keyboard.add_hotkey('ctrl+q', lambda: switch_character(10))   # 角色10
-keyboard.add_hotkey('ctrl+e', lambda: switch_character(11))  # 角色11
-keyboard.add_hotkey('ctrl+r', lambda: switch_character(12))  # 角色12
-keyboard.add_hotkey('ctrl+t', lambda: switch_character(13))  # 角色13
-keyboard.add_hotkey('ctrl+y', lambda: switch_character(0)) 
-keyboard.add_hotkey('ctrl+Tab', lambda: delate(magic_cut_folder))
+快捷键说明:
+Ctrl+1 到 Ctrl+9: 切换角色1-9
+Ctrl+q: 切换角色10
+Ctrl+e: 切换角色11
+Ctrl+r: 切换角色12
+Ctrl+t: 切换角色13
+Ctrl+y: 切换角色14
+Ctrl+0: 显示当前角色
+Alt+1-9: 切换表情1-9(部分角色表情较少 望大家谅解)
+Enter: 生成图片
+Esc: 退出程序
+Ctrl+Tab: 清除图片
 
-for i in range(1,10):
-    keyboard.add_hotkey(f'alt+{i}', lambda idx=i: get_expression(idx))
+程序说明：
+这个版本的程序占用体积较小，但是需要预加载，初次更换角色后需要等待数秒才能正常使用，望周知（
+按Tab可清除生成图片，降低占用空间，但清除图片后需重启才能正常使用
+感谢各位的支持
 
-# 绑定 Ctrl+Alt+H 作为全局热键
-ok=keyboard.add_hotkey(HOTKEY,run_start_in_thread, suppress=BLOCK_HOTKEY or HOTKEY==SEND_HOTKEY)
+改动说明：
+默认启用窗口白名单，只在微信和QQ等聊天窗口前台时才响应热键，避免误触发"""
+        
+        text_widget = tk.Text(intro_frame, height=15, wrap=tk.WORD, font=("Arial", 9))
+        text_widget.pack(fill=tk.BOTH, expand=True)
+        text_widget.insert(tk.END, intro_text)
+        text_widget.config(state=tk.DISABLED)  # 设置为只读
+        
+        # 添加滚动条
+        scrollbar = ttk.Scrollbar(intro_frame, orient=tk.VERTICAL, command=text_widget.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        text_widget.config(yscrollcommand=scrollbar.set)
+    
+    def create_selection_area(self):
+        """创建选择区域"""
+        selection_frame = ttk.LabelFrame(self.root, text="角色选择", padding=10)
+        selection_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        # 角色选择下拉框
+        ttk.Label(selection_frame, text="角色:").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+        
+        # 创建角色名称列表用于下拉框
+        character_names = []
+        for i, key in enumerate(character_list):
+            character_names.append(f"{i+1}. {mahoshojo[key]['name']}")
+        
+        self.character_var = tk.StringVar()
+        self.character_combo = ttk.Combobox(selection_frame, textvariable=self.character_var, values=character_names, state="readonly")
+        self.character_combo.grid(row=0, column=1, sticky=tk.W+tk.E, padx=5, pady=5)
+        self.character_combo.set(f"{current_character_index}. {mahoshojo[get_current_character()]['name']}")
+        self.character_combo.bind('<<ComboboxSelected>>', self.on_character_change)
+        
+        # 表情输入框
+        ttk.Label(selection_frame, text="表情:").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
+        self.expression_var = tk.StringVar(value=str(expression))
+        expression_entry = ttk.Entry(selection_frame, textvariable=self.expression_var, width=10)
+        expression_entry.grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
+        expression_entry.bind('<KeyRelease>', self.on_expression_change)
+        
+        # 背景输入框
+        ttk.Label(selection_frame, text="背景:").grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
+        self.background_var = tk.StringVar(value=str(backgroundNum))
+        background_entry = ttk.Entry(selection_frame, textvariable=self.background_var, width=10)
+        background_entry.grid(row=2, column=1, sticky=tk.W, padx=5, pady=5)
+        background_entry.bind('<KeyRelease>', self.on_background_change)
+        
+        # 设置列权重使下拉框可以扩展
+        selection_frame.columnconfigure(1, weight=1)
+    
+    def create_preview_area(self):
+        """创建预览区域"""
+        preview_frame = ttk.LabelFrame(self.root, text="预览", padding=10)
+        preview_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        
+        # 预览图像
+        self.preview_label = ttk.Label(preview_frame, text="选择有误！", font=("Arial", 16))
+        self.preview_label.pack(expand=True)
+    
+    def on_character_change(self, event):
+        """角色选择改变事件"""
+        global current_character_index
+        selected = self.character_combo.get()
+        if selected:
+            # 提取角色索引（第一个字符）
+            try:
+                new_index = int(selected.split('.')[0])
+                if 1 <= new_index <= len(character_list):
+                    current_character_index = new_index
+                    print(f"已切换到角色: {get_current_character()}")
+                    # 生成并保存图片
+                    generate_and_save_images(get_current_character())
+                    self.update_preview()
+            except ValueError:
+                pass
+    
+    def on_expression_change(self, event):
+        """表情输入改变事件"""
+        global expression
+        try:
+            new_expression = int(self.expression_var.get())
+            character_name = get_current_character()
+            max_expression = mahoshojo[character_name]["emotion_count"]
+            if 1 <= new_expression <= max_expression:
+                expression = new_expression
+                print(f"已切换至第{expression}个表情")
+                self.update_preview()
+            else:
+                self.preview_label.config(text=f"表情范围: 1-{max_expression}")
+        except ValueError:
+            self.preview_label.config(text="请输入有效数字")
+    
+    def on_background_change(self, event):
+        """背景输入改变事件"""
+        global backgroundNum
+        try:
+            new_background = int(self.background_var.get())
+            if 1 <= new_background <= 16:
+                backgroundNum = new_background
+                print(f"已切换至第{backgroundNum}个背景")
+                self.update_preview()
+            else:
+                self.preview_label.config(text="背景范围: 1-16")
+        except ValueError:
+            self.preview_label.config(text="请输入有效数字")
+    
+    def update_preview(self):
+        """更新预览图像"""
+        try:
+            character_name = get_current_character()
+            image_path = os.path.join(magic_cut_folder, f"{get_current_character()} ({(expression-1)*16+backgroundNum})"+".jpg")
+            
+            if os.path.exists(image_path):
+                # 加载并显示图像
+                image = Image.open(image_path)
+                # 调整图像大小以适应预览区域
+                image.thumbnail((400, 400), Image.Resampling.LANCZOS)
+                photo = ImageTk.PhotoImage(image)
+                self.preview_label.config(image=photo, text="")
+                self.preview_label.image = photo  # 保持引用
+            else:
+                self.preview_label.config(image="", text="选择有误！")
+        except Exception as e:
+            self.preview_label.config(image="", text=f"预览错误: {str(e)}")
 
-# 绑定Ctrl+0显示当前角色
-keyboard.add_hotkey('ctrl+0', show_current_character)
+# 主函数
+def main():
+    # 创建GUI
+    root = tk.Tk()
+    app = MagicCutGUI(root)
+    
+    # 角色切换快捷键绑定
+    # 按Ctrl+1 到 Ctrl+9: 切换角色1-9
+    for i in range(1,10):
+        keyboard.add_hotkey(f'ctrl+{i}', lambda idx=i: switch_character(idx))
+    
+    # 角色10-14使用特殊快捷键
+    keyboard.add_hotkey('ctrl+q', lambda: switch_character(10))   # 角色10
+    keyboard.add_hotkey('ctrl+e', lambda: switch_character(11))  # 角色11
+    keyboard.add_hotkey('ctrl+r', lambda: switch_character(12))  # 角色12
+    keyboard.add_hotkey('ctrl+t', lambda: switch_character(13))  # 角色13
+    keyboard.add_hotkey('ctrl+y', lambda: switch_character(0))   # 角色14
+    keyboard.add_hotkey('ctrl+Tab', lambda: delate(magic_cut_folder))
+    
+    for i in range(1,10):
+        keyboard.add_hotkey(f'alt+{i}', lambda idx=i: get_expression(idx))
+    
+    # 绑定 Ctrl+Alt+H 作为全局热键
+    ok=keyboard.add_hotkey(HOTKEY,run_start_in_thread, suppress=BLOCK_HOTKEY or HOTKEY==SEND_HOTKEY)
+    
+    # 绑定Ctrl+0显示当前角色
+    keyboard.add_hotkey('ctrl+0', show_current_character)
+    
+    def on_closing():
+        # 移除所有热键
+        keyboard.unhook_all()
+        root.destroy()
+    
+    root.protocol("WM_DELETE_WINDOW", on_closing)
+    
+    # 启动GUI主循环
+    root.mainloop()
 
-# 保持程序运行
-keyboard.wait("Esc")
+if __name__ == "__main__":
+    main()
