@@ -496,7 +496,7 @@ class MagicCutGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("魔法少女的魔裁工具")
-        self.root.geometry("800x600")
+        self.root.geometry("800x880")
         
         # 创建滚动文本框
         self.create_intro_text()
@@ -571,19 +571,49 @@ Ctrl+Tab: 清除图片
         self.character_combo.set(f"{current_character_index}. {mahoshojo[get_current_character()]['name']}")
         self.character_combo.bind('<<ComboboxSelected>>', self.on_character_change)
         
-        # 表情输入框
+        # 表情选择区域
         ttk.Label(selection_frame, text="表情:").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
+        expression_frame = ttk.Frame(selection_frame)
+        expression_frame.grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
+        
         self.expression_var = tk.StringVar(value=str(expression))
-        expression_entry = ttk.Entry(selection_frame, textvariable=self.expression_var, width=10)
-        expression_entry.grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
+        expression_entry = ttk.Entry(expression_frame, textvariable=self.expression_var, width=10)
+        expression_entry.pack(side=tk.LEFT)
         expression_entry.bind('<KeyRelease>', self.on_expression_change)
         
-        # 背景输入框
+        # 表情上下箭头按钮
+        expression_buttons_frame = ttk.Frame(expression_frame)
+        expression_buttons_frame.pack(side=tk.LEFT, padx=(5, 0))
+        
+        expression_up_btn = ttk.Button(expression_buttons_frame, text="▲", width=2, 
+                                      command=lambda: self.increment_expression(1))
+        expression_up_btn.pack(side=tk.TOP)
+        
+        expression_down_btn = ttk.Button(expression_buttons_frame, text="▼", width=2,
+                                        command=lambda: self.increment_expression(-1))
+        expression_down_btn.pack(side=tk.TOP)
+        
+        # 背景选择区域
         ttk.Label(selection_frame, text="背景:").grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
+        background_frame = ttk.Frame(selection_frame)
+        background_frame.grid(row=2, column=1, sticky=tk.W, padx=5, pady=5)
+        
         self.background_var = tk.StringVar(value=str(backgroundNum))
-        background_entry = ttk.Entry(selection_frame, textvariable=self.background_var, width=10)
-        background_entry.grid(row=2, column=1, sticky=tk.W, padx=5, pady=5)
+        background_entry = ttk.Entry(background_frame, textvariable=self.background_var, width=10)
+        background_entry.pack(side=tk.LEFT)
         background_entry.bind('<KeyRelease>', self.on_background_change)
+        
+        # 背景上下箭头按钮
+        background_buttons_frame = ttk.Frame(background_frame)
+        background_buttons_frame.pack(side=tk.LEFT, padx=(5, 0))
+        
+        background_up_btn = ttk.Button(background_buttons_frame, text="▲", width=2,
+                                      command=lambda: self.increment_background(1))
+        background_up_btn.pack(side=tk.TOP)
+        
+        background_down_btn = ttk.Button(background_buttons_frame, text="▼", width=2,
+                                        command=lambda: self.increment_background(-1))
+        background_down_btn.pack(side=tk.TOP)
         
         # 设置列权重使下拉框可以扩展
         selection_frame.columnconfigure(1, weight=1)
@@ -644,6 +674,40 @@ Ctrl+Tab: 清除图片
         except ValueError:
             self.preview_label.config(text="请输入有效数字")
     
+    def increment_expression(self, step):
+        """表情增减方法"""
+        global expression
+        try:
+            character_name = get_current_character()
+            max_expression = mahoshojo[character_name]["emotion_count"]
+            new_expression = expression + step
+            
+            if 1 <= new_expression <= max_expression:
+                expression = new_expression
+                self.expression_var.set(str(expression))
+                print(f"已切换至第{expression}个表情")
+                self.update_preview()
+            else:
+                self.preview_label.config(text=f"表情范围: 1-{max_expression}")
+        except Exception as e:
+            self.preview_label.config(text="表情调整错误")
+    
+    def increment_background(self, step):
+        """背景增减方法"""
+        global backgroundNum
+        try:
+            new_background = backgroundNum + step
+            
+            if 1 <= new_background <= 16:
+                backgroundNum = new_background
+                self.background_var.set(str(backgroundNum))
+                print(f"已切换至第{backgroundNum}个背景")
+                self.update_preview()
+            else:
+                self.preview_label.config(text="背景范围: 1-16")
+        except Exception as e:
+            self.preview_label.config(text="背景调整错误")
+    
     def update_preview(self):
         """更新预览图像"""
         try:
@@ -654,7 +718,7 @@ Ctrl+Tab: 清除图片
                 # 加载并显示图像
                 image = Image.open(image_path)
                 # 调整图像大小以适应预览区域
-                image.thumbnail((400, 400), Image.Resampling.LANCZOS)
+                image.thumbnail((800, 400), Image.Resampling.LANCZOS)
                 photo = ImageTk.PhotoImage(image)
                 self.preview_label.config(image=photo, text="")
                 self.preview_label.image = photo  # 保持引用
