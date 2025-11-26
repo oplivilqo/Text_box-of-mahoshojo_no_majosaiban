@@ -1,3 +1,5 @@
+这个分支主要用来测试UV以及GitHub Actions等功能，请勿在此分支提交代码。
+
 # 🎭魔法少女的魔女裁判 文本框生成器
 
 一个基于Python的自动化表情包生成工具，能够快速生成带有自定义文本的魔法少女的魔女裁判文本框图片。[灵感来源与代码参考](https://github.com/MarkCup-Official/Anan-s-Sketchbook-Chat-Box)
