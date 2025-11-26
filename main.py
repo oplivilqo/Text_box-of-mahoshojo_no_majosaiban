@@ -79,6 +79,8 @@ import win32process
 import psutil
 from text_fit_draw import draw_text_auto
 from image_fit_paste import paste_image_auto
+import ctypes
+import ctypes.wintypes
 
 # ===== PyInstaller 资源路径处理函数 =====
 def get_resource_path(relative_path):
@@ -211,7 +213,9 @@ username = getpass.getuser()
 
 # 构建用户文档路径
 if os.name == 'nt':  # Windows系统
-    user_documents = os.path.join('C:\\', 'Users', username, 'Documents')
+    buf = ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
+    ctypes.windll.shell32.SHGetFolderPathW(None, 5, None, 0, buf)
+    user_documents = os.path.join(buf.value)  # 这里获取用户当前的文档路径，避免用户迁移导致在默认位置新建文件夹
 else:  # 其他系统
     user_documents = os.path.expanduser('~/Documents')
 
