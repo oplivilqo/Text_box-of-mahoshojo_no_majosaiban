@@ -65,9 +65,10 @@ class ManosabaTextBox:
         self.load_configs()
 
         # 状态变量
-        self.emote = None  # 表情索引
-        self.value_1 = -1  # 我也不知道这是啥我也不敢动
+        self.emote = 0  # 表情索引, 0 表示随机
+        self.value_1 = -1  # 最近一次生成的图片的索引
         self.current_character_index = 3  # 当前角色索引，默认第三个角色（sherri）
+        self.bg_cnt = 16 # 背景数量, 其实应该是个常量 16, 但为了用途统一而放在这里
 
     def setup_paths(self):
         """设置文件路径"""
@@ -142,10 +143,10 @@ class ManosabaTextBox:
             if filename.startswith(character_name):
                 return
 
-        total_images = 16 * emotion_cnt
+        total_images = self.bg_cnt * emotion_cnt
 
         for j in range(emotion_cnt):
-            for i in range(16):
+            for i in range(self.bg_cnt):
                 background_path = os.path.join(
                     self.BASE_PATH, 'assets', "background", f"c{i + 1}.png"
                 )
@@ -157,7 +158,7 @@ class ManosabaTextBox:
                 background = Image.open(background_path).convert("RGBA")
                 overlay = Image.open(overlay_path).convert("RGBA")
 
-                img_num = j * 16 + i + 1
+                img_num = j * self.bg_cnt + i + 1
                 result = background.copy()
                 result.paste(overlay, (0, 134), overlay)
 
@@ -167,18 +168,17 @@ class ManosabaTextBox:
                 result.convert("RGB").save(save_path)
 
                 if progress_callback:
-                    progress_callback(j * 16 + i + 1, total_images)
+                    progress_callback(j * self.bg_cnt + i + 1, total_images)
 
     def get_random_value(self) -> str:
         """随机获取表情图片名称"""
         character_name = self.get_character()
         emotion_cnt = self.get_current_emotion_count()
-        total_images = 16 * emotion_cnt
+        total_images = self.bg_cnt * emotion_cnt
 
-        if self.emote:
-            i = random.randint((self.emote - 1) * 16 + 1, self.emote * 16)
+        if self.emote != 0:
+            i = random.randint((self.emote - 1) * self.bg_cnt + 1, self.emote * self.bg_cnt)
             self.value_1 = i
-            self.emote = None
             return f"{character_name} ({i})"
 
         max_attempts = 100
@@ -187,13 +187,13 @@ class ManosabaTextBox:
 
         while attempts < max_attempts:
             i = random.randint(1, total_images)
-            current_emotion = (i - 1) // 16
+            current_emotion = (i - 1) // self.bg_cnt
 
             if self.value_1 == -1:
                 self.value_1 = i
                 return f"{character_name} ({i})"
 
-            if current_emotion != (self.value_1 - 1) // 16:
+            if current_emotion != (self.value_1 - 1) // self.bg_cnt:
                 self.value_1 = i
                 return f"{character_name} ({i})"
 
@@ -431,7 +431,7 @@ class ManosabaTUI(App):
     theme = "tokyo-night"
 
     current_character = reactive("sherri")
-    current_emotion = reactive(1)
+    current_emotion = reactive(0)
     status_msg = reactive("就绪")
 
     BINDINGS = [
@@ -491,10 +491,10 @@ class ManosabaTUI(App):
                     with ScrollableContainer():
                         with RadioSet(id="emotion_radio"):
                             emotion_cnt = self.textbox.get_current_emotion_count()
-                            for i in range(1, emotion_cnt + 1):
+                            for i in range(0, emotion_cnt + 1):
                                 yield RadioButton(
-                                    f"表情 {i}",
-                                    value=(i == 1),
+                                    f"表情 {i}" if i != 0 else "随机表情",
+                                    value = (i == self.current_emotion),
                                     id=f"emotion_{i}"
                                 )
                 with Vertical(id="switch_panel"):
@@ -615,13 +615,16 @@ class ManosabaTUI(App):
             self.call_after_refresh(self.refresh_emotion_panel)
 
         elif event.radio_set.id == "emotion_radio":
-            # 从按钮标签中提取表情编号
+            # 从按钮 id 中提取表情编号
             try:
-                label = event.pressed.label.plain
-                emotion_num = int(label.split()[-1])
+                label = event.pressed.id or "0"
+                parts = label.split("_")
+                emotion_num = int(parts[-1])
                 self.current_emotion = emotion_num
                 self.textbox.emote = emotion_num
-                self.update_status(f"已选择表情 {emotion_num} 喵")
+                self.update_status(
+                    f"已选择表情 {emotion_num} 喵" if emotion_num != 0 else "已选择随机表情喵"
+                )
             except (ValueError, AttributeError, IndexError) as e:
                 self.update_status(e)
                 pass
@@ -638,17 +641,17 @@ class ManosabaTUI(App):
             except Exception:
                 pass
 
-        # 重置表情为 1
-        self.current_emotion = 1
-        self.textbox.emote = 1
+        # 重置表情为 随机
+        self.current_emotion = 0
+        self.textbox.emote = 0
 
         # 添加新的按钮
         emotion_cnt = self.textbox.get_current_emotion_count()
-        for i in range(1, emotion_cnt + 1):
+        for i in range(0, emotion_cnt + 1):
             unique_id = f"emotion_{self.current_character}_{i}"
             btn = RadioButton(
-                f"表情 {i}",
-                value=(self.textbox.emote == i),
+                f"表情 {i}" if i != 0 else "随机表情",
+                value=(i == self.current_emotion),
                 id=unique_id
             )
             emotion_radio.mount(btn)
