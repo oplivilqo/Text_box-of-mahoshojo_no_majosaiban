@@ -18,23 +18,14 @@ def paste_image_auto(
     allow_upscale: bool = False,
     keep_alpha: bool = True,
     image_overlay: Union[str, Image.Image, None] = None,
-    max_image_size: Tuple[int, int] = (None, None),  # 添加最大图片尺寸限制 (width, height)
-    role_name: str = "unknown",  # 添加角色名称参数
-    text_configs_dict: dict = None,  # 添加文字配置字典参数
-    base_path: str = None,  # 添加基础路径参数
-    overlay_offset: Tuple[int, int] = (0, 0),  # 添加覆盖图偏移参数
+    max_image_size: Tuple[int, int] = (None, None),
+    role_name: str = "unknown",
+    text_configs_dict: dict = None,
+    base_path: str = None,
+    overlay_offset: Tuple[int, int] = (0, 0),
 ) -> bytes:
     """
     在指定矩形内放置一张图片（content_image），按比例缩放至"最大但不超过"该矩形。
-    - base_image: 底图（会被复制，原图不改）
-    - top_left / bottom_right: 指定矩形区域（左上/右下坐标）
-    - content_image: 待放入的图片（PIL.Image.Image）
-    - align / valign: 水平/垂直对齐方式
-    - padding: 矩形内边距（像素），四边统一
-    - allow_upscale: 是否允许放大（默认只缩小不放大）
-    - keep_alpha: True 时保留透明通道并用其作为粘贴蒙版
-
-    返回：最终 PNG 的 bytes。
     """
     if not isinstance(content_image, Image.Image):
         raise TypeError("content_image 必须为 PIL.Image.Image")
@@ -67,7 +58,7 @@ def paste_image_auto(
     if cw <= 0 or ch <= 0:
         raise ValueError("content_image 尺寸无效。")
 
-    # 计算缩放比例（contain：不超过区域，并保持纵横比）
+    # 计算缩放比例
     scale_w = region_w / cw
     scale_h = region_h / ch
     scale = min(scale_w, scale_h)
@@ -106,11 +97,10 @@ def paste_image_auto(
     else:  # "bottom"
         py = y2 - padding - new_h
 
-    # 处理透明度：若 keep_alpha=True 且有 alpha，则用 alpha 作为 mask 粘贴
+    # 处理透明度
     if keep_alpha and ("A" in resized.getbands()):
         img.paste(resized, (px, py), resized)
     else:
-        # 没有 alpha 就直接粘贴（会覆盖底图该区域）
         img.paste(resized, (px, py))
 
     # 覆盖置顶图层（如果有）- 应用偏移
@@ -121,10 +111,9 @@ def paste_image_auto(
         print("Warning: overlay image is not exist.")
     
     # 自动在图片上写角色专属文字
-    # 如果提供了文字配置字典且角色名称存在，则使用对应的文字配置
     if text_configs_dict and role_name in text_configs_dict:
-        shadow_offset = (2, 2)  # 阴影偏移量
-        shadow_color = (0, 0, 0)  # 黑色阴影
+        shadow_offset = (2, 2)
+        shadow_color = (0, 0, 0)
         
         for config in text_configs_dict[role_name]:
             text = config["text"]
@@ -132,13 +121,11 @@ def paste_image_auto(
             font_color = tuple(config["font_color"])
             font_size = config["font_size"]
         
-            # 使用相对路径加载字体文件，优先使用传入的基础路径
             if base_path:
                 font_dir = os.path.join(base_path, 'assets', 'fonts')
             else:
                 font_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'fonts')
             
-            # 尝试多种字体文件
             font_files = ["font3.ttf", "arial.ttf", "DejaVuSans.ttf"]
             font = None
             
@@ -152,22 +139,18 @@ def paste_image_auto(
                         print(f"加载字体 {font_path} 失败: {e}")
                         continue
             
-            # 如果所有字体都失败，使用默认字体
             if font is None:
                 try:
                     font = ImageFont.load_default()
                 except:
-                    # 如果默认字体也失败，跳过文字绘制
                     print("无法加载任何字体，跳过文字绘制")
                     continue
             
-            # 计算阴影位置
+            # 绘制阴影文字
             shadow_position = (position[0] + shadow_offset[0], position[1] + shadow_offset[1])
-            
-            # 先绘制阴影文字
             draw.text(shadow_position, text, fill=shadow_color, font=font)
             
-            # 再绘制主文字（覆盖在阴影上方）
+            # 绘制主文字
             draw.text(position, text, fill=font_color, font=font)
 
     # 输出 PNG bytes

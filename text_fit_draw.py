@@ -20,7 +20,6 @@ def compress_image(image: Image.Image) -> Image.Image:
     new_width = int(width * IMAGE_SETTINGS["resize_ratio"])
     new_height = int(height * IMAGE_SETTINGS["resize_ratio"])
     
-    # 限制最大尺寸
     if new_width > IMAGE_SETTINGS["max_width"]:
         ratio = IMAGE_SETTINGS["max_width"] / new_width
         new_width, new_height = IMAGE_SETTINGS["max_width"], int(new_height * ratio)
@@ -42,12 +41,12 @@ def draw_text_auto(
     align: Align = "center",
     valign: VAlign = "middle",
     line_spacing: float = 0.15,
-    bracket_color: Tuple[int, int, int] = (137,177,251),  # 中括号及内部内容颜色
+    bracket_color: Tuple[int, int, int] = (137,177,251),
     image_overlay: Union[str, Image.Image, None] = None,
-    role_name: str = "unknown",  # 添加角色名称参数
-    text_configs_dict: dict = None,  # 添加文字配置字典参数
-    base_path: str = None,  # 添加基础路径参数
-    overlay_offset: Tuple[int, int] = (0, 0),  # 添加覆盖图偏移参数
+    role_name: str = "unknown",
+    text_configs_dict: dict = None,
+    base_path: str = None,
+    overlay_offset: Tuple[int, int] = (0, 0),
 ) -> bytes:
     """
     在指定矩形内自适应字号绘制文本；
@@ -84,11 +83,9 @@ def draw_text_auto(
             except Exception as e:
                 print(f"加载指定字体失败 {font_path}: {e}")
         
-        # 尝试多种默认字体
         font_files = ["arial.ttf", "DejaVuSans.ttf"]
         if base_path:
             font_dir = os.path.join(base_path, 'assets', 'fonts')
-            # 优先尝试项目字体
             project_fonts = ["font3.ttf"] + font_files
             for font_file in project_fonts:
                 try_path = os.path.join(font_dir, font_file)
@@ -98,18 +95,15 @@ def draw_text_auto(
                     except Exception:
                         continue
         
-        # 尝试系统字体
         for font_file in font_files:
             try:
                 return ImageFont.truetype(font_file, size=size)
             except Exception:
                 continue
         
-        # 最后使用默认字体
         try:
             return ImageFont.load_default()
         except Exception:
-            # 如果默认字体也失败，创建一个简单的字体
             return ImageFont.load_default()
 
     # --- 3. 文本包行 ---
@@ -161,7 +155,6 @@ def draw_text_auto(
             ascent, descent = font.getmetrics()
             line_h = int((ascent + descent) * (1 + line_spacing))
         except:
-            # 如果获取字体指标失败，使用估计值
             line_h = int(font.size * (1 + line_spacing))
         
         max_w = 0
@@ -247,7 +240,7 @@ def draw_text_auto(
         if y - y_start > region_h:
             break
 
-    # 覆盖置顶图层（如果有）- 应用偏移
+    # 覆盖置顶图层（如果有）
     if image_overlay is not None and img_overlay is not None:
         offset_x, offset_y = overlay_offset
         img.paste(img_overlay, (offset_x, offset_y), img_overlay)
@@ -255,10 +248,9 @@ def draw_text_auto(
         print("Warning: overlay image is not exist.")
 
     # 自动在图片上写角色专属文字
-    # 如果提供了文字配置字典且角色名称存在，则使用对应的文字配置
     if text_configs_dict and role_name in text_configs_dict:
-        shadow_offset = (2, 2)  # 阴影偏移量
-        shadow_color = (0, 0, 0)  # 黑色阴影
+        shadow_offset = (2, 2)
+        shadow_color = (0, 0, 0)
         
         for config in text_configs_dict[role_name]:
             text = config["text"]
@@ -266,13 +258,11 @@ def draw_text_auto(
             font_color = tuple(config["font_color"])
             font_size = config["font_size"]
         
-            # 使用相对路径加载字体文件，优先使用传入的基础路径
             if base_path:
                 font_dir = os.path.join(base_path, 'assets', 'fonts')
             else:
                 font_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'fonts')
             
-            # 尝试多种字体文件
             font_files = ["font3.ttf", "arial.ttf", "DejaVuSans.ttf"]
             role_font = None
             
@@ -286,28 +276,21 @@ def draw_text_auto(
                         print(f"加载字体 {try_path} 失败: {e}")
                         continue
             
-            # 如果所有字体都失败，使用默认字体
             if role_font is None:
                 try:
                     role_font = ImageFont.load_default()
                 except:
-                    # 如果默认字体也失败，跳过文字绘制
                     print("无法加载任何字体，跳过角色专属文字绘制")
                     continue
             
-            # 计算阴影位置
+            # 绘制阴影文字
             shadow_position = (position[0] + shadow_offset[0], position[1] + shadow_offset[1])
-            
-            # 先绘制阴影文字
             draw.text(shadow_position, text, fill=shadow_color, font=role_font)
             
-            # 再绘制主文字（覆盖在阴影上方）
+            # 绘制主文字
             draw.text(position, text, fill=font_color, font=role_font)
 
-    # 压缩图像（可选，根据需求决定是否启用）
-    # img = compress_image(img)
-    
-    # --- 9. 输出 PNG ---
+    # 输出 PNG
     buf = BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()

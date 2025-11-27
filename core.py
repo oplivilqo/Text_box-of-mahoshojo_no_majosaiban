@@ -1,13 +1,14 @@
-"""魔裁文本框核心逻辑"""
+"""魔裁文本框核心逻辑 - 优化版本"""
 import os
 import time
 import random
 import psutil
 import threading
+import io
 from pynput.keyboard import Key, Controller
 from sys import platform
 import keyboard as kb_module
-import PIL as Image
+from PIL import Image
 
 if platform.startswith('win'):
     try:
@@ -17,35 +18,22 @@ if platform.startswith('win'):
         print("[red]请先安装 Windows 运行库: pip install pywin32[/red]")
         raise
 
-from config_loader import ConfigLoader
+from config import ConfigLoader, AppConfig
 from clipboard_utils import ClipboardManager
 from image_processor import ImageProcessor
 
 
 class ManosabaCore:
-    """魔裁文本框核心类"""
+    """魔裁文本框核心类 - 优化版本"""
 
     def __init__(self):
-        # 常量定义
-        self.BOX_RECT = ((728, 355), (2339, 800))  # 文本框区域坐标
-        self.KEY_DELAY = 0.1  # 按键延迟
-        
-        # 设置
-        self.AUTO_PASTE_IMAGE = True
-        self.AUTO_SEND_IMAGE = True
-        self.PRE_COMPOSE_IMAGES = False
-
+        # 初始化配置
+        self.config = AppConfig(os.path.dirname(os.path.abspath(__file__)))
         self.kbd_controller = Controller()
         self.clipboard_manager = ClipboardManager()
 
-        # 初始化路径
-        self.BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-        self.ASSETS_PATH = os.path.join(self.BASE_PATH, "assets")
-        self.CACHE_PATH = os.path.join(self.ASSETS_PATH, "cache")
-        os.makedirs(self.CACHE_PATH, exist_ok=True)
-
         # 加载配置
-        self.config_loader = ConfigLoader(self.BASE_PATH)
+        self.config_loader = ConfigLoader(self.config.BASE_PATH)
         self.mahoshojo = {}
         self.text_configs_dict = {}
         self.character_list = []
@@ -54,17 +42,28 @@ class ManosabaCore:
         self.load_configs()
 
         # 初始化图片处理器
-        self.image_processor = ImageProcessor(self.BASE_PATH, self.BOX_RECT, self.text_configs_dict)
+        self.image_processor = ImageProcessor(self.config.BASE_PATH, self.config.BOX_RECT, self.text_configs_dict)
 
         # 状态变量
-        self.selected_emotion = None  # 选择的表情，None表示随机
-        self.selected_background = None  # 选择的背景，None表示随机
+        self.selected_emotion = None
+        self.selected_background = None
         self.last_emotion = -1
-        self.current_character_index = 3  # 默认第三个角色（sherri）
+        self.current_character_index = 3
         
         # 预览相关
         self.preview_emotion = None
         self.preview_background = None
+        
+        # 角色图片缓存
+        self.character_cache = {}
+        
+        # 当前预览的基础图片缓存（用于快速生成）
+        self.current_base_image = None
+        self.current_base_image_key = None
+        
+        # 启动热键监听线程
+        self.hotkey_thread = threading.Thread(target=self._setup_hotkeys, daemon=True)
+        self.hotkey_thread.start()
 
     def load_configs(self):
         """加载所有配置"""
@@ -73,6 +72,16 @@ class ManosabaCore:
         self.text_configs_dict = self.config_loader.load_text_configs()
         self.keymap = self.config_loader.load_keymap(platform)
         self.process_whitelist = self.config_loader.load_process_whitelist(platform)
+
+    def _setup_hotkeys(self):
+        """设置全局热键"""
+        if platform.startswith('win'):
+            try:
+                import keyboard
+                hotkey = self.keymap.get('start_generate', 'ctrl+alt+g')
+                keyboard.add_hotkey(hotkey, self.generate_image)
+            except ImportError:
+                print("键盘模块不可用，热键功能禁用")
 
     def get_character(self, index: str | None = None, full_name: bool = False) -> str:
         """获取角色名称"""
@@ -86,12 +95,32 @@ class ManosabaCore:
         """切换到指定索引的角色"""
         if 0 < index <= len(self.character_list):
             self.current_character_index = index
+            character_name = self.get_character()
+            # 预加载角色图片到内存
+            self._preload_character_images(character_name)
             return True
         return False
 
+    def _preload_character_images(self, character_name: str):
+        """预加载角色图片到内存"""
+        if character_name not in self.character_cache:
+            self.character_cache[character_name] = {}
+            emotion_count = self.get_current_emotion_count()
+            
+            for emotion_index in range(1, emotion_count + 1):
+                overlay_path = os.path.join(
+                    self.config.BASE_PATH, 'assets', 'chara', character_name,
+                    f"{character_name} ({emotion_index}).png"
+                )
+                if os.path.exists(overlay_path):
+                    try:
+                        self.character_cache[character_name][emotion_index] = Image.open(overlay_path).convert("RGBA")
+                    except Exception as e:
+                        print(f"加载角色图片失败 {overlay_path}: {e}")
+
     def get_current_font(self) -> str:
         """返回当前角色的字体文件绝对路径"""
-        return os.path.join(self.BASE_PATH, 'assets', 'fonts',
+        return os.path.join(self.config.BASE_PATH, 'assets', 'fonts',
                            self.mahoshojo[self.get_character()]["font"])
 
     def get_current_emotion_count(self) -> int:
@@ -100,21 +129,9 @@ class ManosabaCore:
 
     def delete_cache(self) -> None:
         """删除缓存"""
-        for filename in os.listdir(self.CACHE_PATH):
+        for filename in os.listdir(self.config.CACHE_PATH):
             if filename.lower().endswith('.jpg'):
-                os.remove(os.path.join(self.CACHE_PATH, filename))
-
-    def pre_compose_images(self, character_name: str, progress_callback=None) -> None:
-        """预合成图片（在后台线程中执行）"""
-        emotion_cnt = self.mahoshojo[character_name]["emotion_count"]
-        
-        def compose_in_thread():
-            self.image_processor.generate_precomposed_images(
-                character_name, emotion_cnt, self.CACHE_PATH, progress_callback
-            )
-        
-        thread = threading.Thread(target=compose_in_thread, daemon=True)
-        thread.start()
+                os.remove(os.path.join(self.config.CACHE_PATH, filename))
 
     def generate_preview(self, preview_size=(400, 300)) -> tuple:
         """生成预览图片和相关信息"""
@@ -132,7 +149,7 @@ class ManosabaCore:
         else:
             background_index = self.selected_background
         
-        # 保存预览使用的表情和背景，确保最终图片与预览一致
+        # 保存预览使用的表情和背景
         self.preview_emotion = emotion_index
         self.preview_background = background_index
         
@@ -217,17 +234,17 @@ class ManosabaCore:
         new_clip = ""
         max_retries = 3
         for attempt in range(max_retries):
-            time.sleep(self.KEY_DELAY)
+            time.sleep(self.config.KEY_DELAY)
             new_clip = self.clipboard_manager.get_text_from_clipboard()
             if new_clip.strip():
                 break
             elif attempt < max_retries - 1:
-                time.sleep(self.KEY_DELAY * (attempt + 1))
+                time.sleep(self.config.KEY_DELAY * (attempt + 1))
 
         return new_clip.strip()
 
     def generate_image(self) -> str:
-        """生成并发送图片，返回状态消息"""
+        """生成并发送图片 - 优化版本"""
         if not self._active_process_allowed():
             return "前台应用不在白名单内"
         
@@ -256,14 +273,11 @@ class ManosabaCore:
             return "错误: 没有文本或图像"
 
         try:
-            # 生成图片
-            if self.PRE_COMPOSE_IMAGES:
-                png_bytes = self._generate_with_precomposed(character_name, text, image, emotion_index, background_index)
-            else:
-                png_bytes = self.image_processor.generate_image_directly(
-                    character_name, background_index, emotion_index, 
-                    text, image, self.get_current_font()
-                )
+            # 使用快速生成方法
+            png_bytes = self.image_processor.generate_image_fast(
+                character_name, background_index, emotion_index, 
+                text, image, self.get_current_font()
+            )
         except Exception as e:
             return f"生成图像失败: {e}"
 
@@ -275,7 +289,7 @@ class ManosabaCore:
             return "复制到剪贴板失败"
 
         # 自动粘贴和发送
-        if self.AUTO_PASTE_IMAGE:
+        if self.config.AUTO_PASTE_IMAGE:
             self.kbd_controller.press(Key.ctrl if platform != 'darwin' else Key.cmd)
             self.kbd_controller.press('v')
             self.kbd_controller.release('v')
@@ -283,17 +297,8 @@ class ManosabaCore:
 
             time.sleep(0.3)
 
-            if self.AUTO_SEND_IMAGE:
+            if self.config.AUTO_SEND_IMAGE:
                 self.kbd_controller.press(Key.enter)
                 self.kbd_controller.release(Key.enter)
 
         return f"成功生成图片！角色: {character_name}, 表情: {emotion_index}, 背景: {background_index}"
-
-    def _generate_with_precomposed(self, character_name: str, text: str, image: Image.Image, emotion_index: int, background_index: int) -> bytes:
-        """使用预合成图片生成"""
-        # 这里需要实现预合成模式的逻辑
-        # 由于时间关系，这里简化实现，直接调用直接生成方法
-        return self.image_processor.generate_image_directly(
-            character_name, background_index, emotion_index, 
-            text, image, self.get_current_font()
-        )

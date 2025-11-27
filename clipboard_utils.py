@@ -31,7 +31,6 @@ class ClipboardManager:
             elif self.platform.startswith('win'):
                 return self._copy_image_windows(png_bytes)
             else:
-                # Linux 支持
                 return self._copy_image_linux(png_bytes)
         except Exception as e:
             print(f"复制图片到剪贴板失败: {e}")
@@ -56,13 +55,10 @@ class ClipboardManager:
     def _copy_image_windows(self, png_bytes: bytes) -> bool:
         """Windows 复制图片到剪贴板"""
         try:
-            # 打开 PNG 字节为 Image
             image = Image.open(io.BytesIO(png_bytes))
-            # 转换成 BMP 字节流（去掉 BMP 文件头的前 14 个字节）
             with io.BytesIO() as output:
                 image.convert("RGB").save(output, "BMP")
                 bmp_data = output.getvalue()[14:]
-            # 打开剪贴板并写入 DIB 格式
             win32clipboard.OpenClipboard()
             win32clipboard.EmptyClipboard()
             win32clipboard.SetClipboardData(win32clipboard.CF_DIB, bmp_data)
@@ -79,7 +75,6 @@ class ClipboardManager:
     
     def _copy_image_linux(self, png_bytes: bytes) -> bool:
         """Linux 复制图片到剪贴板"""
-        # TODO: 实现 Linux 支持
         print("Linux 剪贴板支持尚未实现")
         return False
     
@@ -131,9 +126,7 @@ class ClipboardManager:
             if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_DIB):
                 data = win32clipboard.GetClipboardData(win32clipboard.CF_DIB)
                 if data:
-                    # 将 DIB 数据转换为字节流，供 Pillow 打开
                     bmp_data = data
-                    # DIB 格式缺少 BMP 文件头，需要手动加上
                     header = b'BM' + (len(bmp_data) + 14).to_bytes(4, 'little') + b'\x00\x00\x00\x00\x36\x00\x00\x00'
                     image = Image.open(io.BytesIO(header + bmp_data))
                     return image
@@ -148,5 +141,4 @@ class ClipboardManager:
     
     def _get_image_linux(self) -> Image.Image | None:
         """Linux 从剪贴板获取图片"""
-        # TODO: 实现 Linux 支持
         return None
