@@ -1,6 +1,10 @@
 # 🎭魔法少女的魔女裁判 文本框生成器
 
-一个基于Python的自动化表情包生成工具，能够快速生成带有自定义文本的魔法少女的魔女裁判文本框图片。[灵感来源与代码参考](https://github.com/MarkCup-Official/Anan-s-Sketchbook-Chat-Box)
+一个自动化表情包生成工具，能够快速生成带有自定义文本的魔法少女的魔女裁判文本框图片。
+
+[Python实现](#Python实现) [JavaScript实现](#JavaScript实现)
+
+# Python实现
 
 ## 预览
 <img width="1200" height="390" alt="5f10f4239bc8a82812e505fd0c4f5567" src="https://github.com/user-attachments/assets/6fb46a8d-4fc4-4d10-80a0-ed21fbb428bf" />
@@ -117,11 +121,27 @@ warden:
   
 ### 以上. 柊回文————2025.11.15
 
+</div>
 
+# JavaScript实现
 
+![JS版界面截图](https://github.com/user-attachments/assets/38d0e142-8707-4f43-b1a8-1bb0bcdbe848)
 
+无需Python环境，使用浏览器实现的版本。适合偶尔生成图片的用户。
 
+## 使用方法
 
+无需部署到Web服务器，直接下载整个仓库然后本地使用浏览器打开`index.html`即可使用。
 
+~~都有GUI了应该不用再多说什么了吧……~~
 
+## 已测试环境
+
+已在 `Windows`、`MacOS`、`Android` 系统的 `Chromium` 内核浏览器上测试过，功能正常。理论上来说应该现代浏览器都能支持。
+
+## 版权相关
+
+仅供个人学习交流使用，各类素材均归属于相关版权方。
+
+背景、立绘等图片素材 © Re,AER LLC./Acacia
 
