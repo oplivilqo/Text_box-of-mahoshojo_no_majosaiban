@@ -1,1 +1,5 @@
+/assets/cache/
+/__pycache__/
+/.vs/
+/emoji_png/
 .DS_Store
