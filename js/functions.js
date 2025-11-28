@@ -162,7 +162,7 @@ function updateCanvas() {
             let currentX = x;
 
             parts.forEach(part => {
-                if (part === '【' || part === '】') {
+                if (part === '【') {
                     isHighlight = true;
                 }
                 if (isHighlight) {
