@@ -5,22 +5,20 @@ darwin:
   character_4: <ctrl>+4
   character_5: <ctrl>+5
   character_6: <ctrl>+6
-  
-  prev_background: <ctrl>+i
-  next_background: <ctrl>+k
-  prev_character: <ctrl>+j
-  next_character: <ctrl>+l
-  prev_emotion: <ctrl>+u
-  next_emotion: <ctrl>+o
-
-  pause: <ctrl>+r
-  quit: <ctrl>+q
   delete_cache: <ctrl>+d
+  next_background: <ctrl>+k
+  next_character: <ctrl>+l
+  next_emotion: <ctrl>+o
+  pause: <ctrl>+r
+  prev_background: <ctrl>+i
+  prev_character: <ctrl>+j
+  prev_emotion: <ctrl>+u
+  quit: <ctrl>+q
   start_generate: <ctrl>+enter
   toggle_listener: <alt>+<ctrl>+p
 gui:
-  font_family: SimSun
-  font_size: 12
+  font_family: font3
+  font_size: 100
   quick_characters:
     character_1: ema
     character_2: hiro
@@ -35,16 +33,14 @@ win32:
   character_4: ctrl+4
   character_5: ctrl+5
   character_6: ctrl+6
-  
-  prev_background: ctrl+i
-  next_background: ctrl+k
-  prev_emotion: ctrl+u
-  next_emotion: ctrl+o
-  prev_character: ctrl+j
-  next_character: ctrl+l
-  
-  pause: ctrl+r
-  quit: ctrl+q
   delete_cache: ctrl+d
+  next_background: ctrl+k
+  next_character: ctrl+l
+  next_emotion: ctrl+o
+  pause: ctrl+r
+  prev_background: ctrl+i
+  prev_character: ctrl+j
+  prev_emotion: ctrl+u
+  quit: ctrl+q
   start_generate: ctrl+e
   toggle_listener: alt+ctrl+p

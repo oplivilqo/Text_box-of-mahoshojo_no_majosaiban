@@ -4,8 +4,8 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import ImageTk
 import threading
-import yaml
 import os
+# import yaml
 import time
 
 from core import ManosabaCore
@@ -69,14 +69,18 @@ class SettingsWindow:
         font_frame = ttk.LabelFrame(parent, text="字体设置", padding="10")
         font_frame.pack(fill=tk.X, pady=5)
 
-        ttk.Label(font_frame, text="字体:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Label(font_frame, text="对话框字体:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        
+        # 获取可用字体列表
+        available_fonts = self.get_available_fonts()
+        
         self.font_family_var = tk.StringVar(
             value=self.settings.get("font_family", "Arial")
         )
         font_combo = ttk.Combobox(
             font_frame,
             textvariable=self.font_family_var,
-            values=["Arial", "SimHei", "Microsoft YaHei", "SimSun", "KaiTi"],
+            values=available_fonts,
             state="readonly",
             width=20,
         )
@@ -84,7 +88,7 @@ class SettingsWindow:
         font_combo.bind("<<ComboboxSelected>>", self.on_setting_changed)
 
         # 字号设置
-        ttk.Label(font_frame, text="初始字号:").grid(
+        ttk.Label(font_frame, text="对话框字号:").grid(
             row=1, column=0, sticky=tk.W, pady=5
         )
         self.font_size_var = tk.IntVar(value=self.settings.get("font_size", 12))
@@ -95,6 +99,42 @@ class SettingsWindow:
         font_size_spin.bind("<KeyRelease>", self.on_setting_changed)
         font_size_spin.bind("<<Increment>>", self.on_setting_changed)
         font_size_spin.bind("<<Decrement>>", self.on_setting_changed)
+        
+        # 字体说明
+        ttk.Label(font_frame, text="注：角色名字字体保持不变，使用角色配置中的专用字体", 
+                 font=("", 8), foreground="gray").grid(
+            row=2, column=0, columnspan=2, sticky=tk.W, pady=2
+        )
+
+    def get_available_fonts(self):
+        """获取可用字体列表，优先显示项目字体"""
+        fonts_dir = os.path.join(self.core.config.BASE_PATH, "assets", "fonts")
+        project_fonts = []
+        # system_fonts = []
+        
+        # 获取项目字体
+        if os.path.exists(fonts_dir):
+            for file in os.listdir(fonts_dir):
+                if file.lower().endswith(('.ttf', '.otf', '.ttc')):
+                    font_name = os.path.splitext(file)[0]
+                    project_fonts.append(font_name)
+        
+        # 这里简化处理，实际可以添加更多系统字体
+        # system_fonts = ["Arial", "SimHei", "Microsoft YaHei", "SimSun", "KaiTi"]
+        
+        # 合并列表，项目字体在前
+        # all_fonts = project_fonts + system_fonts
+        
+        # # 去重并保持顺序
+        # seen = set()
+        # unique_fonts = []
+        # for font in all_fonts:
+        #     if font not in seen:
+        #         seen.add(font)
+        #         unique_fonts.append(font)
+        
+        # return unique_fonts
+        return project_fonts
 
     def setup_hotkey_tab(self, parent):
         """设置快捷键标签页"""
@@ -307,7 +347,6 @@ class SettingsWindow:
         """应用设置但不关闭窗口"""
         self.on_setting_changed()
 
-
 class ManosabaGUI:
     """魔裁文本框 GUI"""
 
@@ -322,7 +361,6 @@ class ManosabaGUI:
 
         # 热键监听状态
         self.hotkey_listener_active = True
-        # self.current_hotkeys = {}
 
         self.setup_gui()
         self.root.bind("<Configure>", self.on_window_resize)
@@ -661,6 +699,8 @@ class ManosabaGUI:
             new_index = total_chars
 
         if self.core.switch_character(new_index):
+            # 切换角色后清理缓存
+            self.core.image_processor.clear_cache()
             # 更新GUI显示
             self.character_var.set(
                 f"{self.core.get_character(full_name=True)} ({self.core.get_character()})"

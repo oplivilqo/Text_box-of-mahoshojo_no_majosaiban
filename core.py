@@ -7,9 +7,6 @@ import psutil
 from pynput.keyboard import Key, Controller
 from sys import platform
 import keyboard as kb_module
-# import threading
-# import io
-# from PIL import Image
 
 if platform.startswith("win"):
     try:
@@ -60,6 +57,9 @@ class ManosabaCore:
         self.preview_emotion = None
         self.preview_background = None
 
+        # GUI设置
+        self.gui_settings = self.config_loader.load_gui_settings()
+
     def load_configs(self):
         """加载所有配置"""
         self.mahoshojo = self.config_loader.load_chara_meta()
@@ -105,11 +105,13 @@ class ManosabaCore:
 
     def get_gui_settings(self):
         """获取GUI设置"""
-        return self.config_loader.load_gui_settings()
+        return self.gui_settings
 
     def save_gui_settings(self, settings):
         """保存GUI设置"""
+        self.gui_settings = settings
         return self.config_loader.save_gui_settings(settings)
+
     def generate_preview(self, preview_size=(400, 300)) -> tuple:
         """生成预览图片和相关信息"""
         character_name = self.get_character()
@@ -247,17 +249,17 @@ class ManosabaCore:
         # 确保使用预览时确定的表情和背景
         if hasattr(self, "preview_emotion") and self.preview_emotion is not None:
             emotion_index = self.preview_emotion
-        elif self.selected_emotion is None:
-            emotion_index = self._get_random_emotion(self.get_current_emotion_count())
-        else:
-            emotion_index = self.selected_emotion
+        # elif self.selected_emotion is None:
+        #     emotion_index = self._get_random_emotion(self.get_current_emotion_count())
+        # else:
+        #     emotion_index = self.selected_emotion
 
         if hasattr(self, "preview_background") and self.preview_background is not None:
             background_index = self.preview_background
-        elif self.selected_background is None:
-            background_index = self.image_processor.get_random_background()
-        else:
-            background_index = self.selected_background
+        # elif self.selected_background is None:
+        #     background_index = self.image_processor.get_random_background()
+        # else:
+        #     background_index = self.selected_background
 
         # 获取剪切板内容
         text = self.cut_all_and_get_text()
@@ -267,14 +269,36 @@ class ManosabaCore:
             return "错误: 没有文本或图像"
 
         try:
-            # 使用快速生成方法
+            # 使用GUI中设置的对话框字体，而不是角色专用字体
+            font_path = None
+            font_family = self.gui_settings.get("font_family")
+            font_size = self.gui_settings.get("font_size", 12)
+
+            # 如果设置了字体家族，查找对应的字体文件
+            if font_family:
+                # 查找字体文件
+                fonts_dir = os.path.join(self.config.BASE_PATH, "assets", "fonts")
+                if os.path.exists(fonts_dir):
+                    for file in os.listdir(fonts_dir):
+                        # 检查文件名是否包含字体家族名称（不区分大小写）
+                        if font_family.lower() in file.lower() and file.lower().endswith(('.ttf', '.otf', '.ttc')):
+                            font_path = os.path.join(fonts_dir, file)
+                            break
+                
+                # 如果没找到匹配的字体文件，使用默认字体
+                if not font_path:
+                    font_path = self.get_current_font()  # 回退到角色专用字体
+            else:
+                font_path = self.get_current_font()  # 使用角色专用字体
+                
             png_bytes = self.image_processor.generate_image_fast(
                 character_name,
                 background_index,
                 emotion_index,
                 text,
                 image,
-                self.get_current_font(),
+                font_path,  # 使用GUI设置的字体而不是角色专用字体
+                font_size,
             )
         except Exception as e:
             return f"生成图像失败: {e}"

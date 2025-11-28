@@ -4,9 +4,6 @@ import os
 import random
 from PIL import Image, ImageDraw, ImageFont
 
-# import io
-# from typing import Optional
-
 from text_fit_draw import draw_text_auto
 from image_fit_paste import paste_image_auto
 
@@ -124,6 +121,24 @@ class ImageProcessor:
                     self.font_cache[cache_key] = ImageFont.load_default()
         return self.font_cache[cache_key]
 
+    def _get_available_fonts(self):
+        """获取可用的字体列表"""
+        font_dir = os.path.join(self.base_path, "assets", "fonts")
+        project_fonts = []
+        system_fonts = []
+        
+        # 获取项目字体
+        if os.path.exists(font_dir):
+            for file in os.listdir(font_dir):
+                if file.lower().endswith(('.ttf', '.otf', '.ttc')):
+                    project_fonts.append(os.path.join(font_dir, file))
+        
+        # 获取系统字体（作为备选）
+        # 这里可以添加系统字体扫描逻辑，但为了简化，我们只返回项目字体
+        # 实际使用时可以根据需要添加系统字体扫描
+        
+        return project_fonts, system_fonts
+
     def generate_base_image_with_text(
         self, character_name: str, background_index: int, emotion_index: int
     ) -> Image.Image:
@@ -141,7 +156,7 @@ class ImageProcessor:
         result = background.copy()
         result.paste(overlay, (0, 134), overlay)
 
-        # 添加角色名称文字
+        # 添加角色名称文字 - 使用角色专用字体，保持不变
         if self.text_configs_dict and character_name in self.text_configs_dict:
             draw = ImageDraw.Draw(result)
             shadow_offset = (2, 2)
@@ -153,27 +168,9 @@ class ImageProcessor:
                 font_color = tuple(config["font_color"])
                 font_size = config["font_size"]
 
-                # 使用字体缓存
-                font_dir = os.path.join(self.base_path, "assets", "fonts")
-                font_files = ["font3.ttf", "arial.ttf", "DejaVuSans.ttf"]
-                font = None
-
-                for font_file in font_files:
-                    font_path = os.path.join(font_dir, font_file)
-                    if os.path.exists(font_path):
-                        try:
-                            font = self._get_font(font_path, font_size)
-                            break
-                        except Exception as e:
-                            print(f"加载字体 {font_path} 失败: {e}")
-                            continue
-
-                if font is None:
-                    try:
-                        font = ImageFont.load_default()
-                    except:
-                        print("无法加载任何字体，跳过文字绘制")
-                        continue
+                # 使用角色专用字体（保持不变）
+                font_path = self.get_character_font(character_name)
+                font = self._get_font(font_path, font_size)
 
                 # 绘制阴影文字
                 shadow_position = (
@@ -196,6 +193,7 @@ class ImageProcessor:
         text: str = None,
         content_image: Image.Image = None,
         font_path: str = None,
+        font_size: int = None,
     ) -> bytes:
         """快速生成图片 - 使用缓存的基础图片"""
         cache_key = f"{character_name}_{background_index}_{emotion_index}"
@@ -232,6 +230,9 @@ class ImageProcessor:
                 overlay_offset=(0, 134),
             )
         elif text is not None and text != "":
+            # 使用设置的字体大小作为最大字体大小
+            max_font_height = font_size if font_size else 145
+            
             return draw_text_auto(
                 image_source=base_image,
                 image_overlay=None,
@@ -241,7 +242,7 @@ class ImageProcessor:
                 align="left",
                 valign="top",
                 color=(255, 255, 255),
-                max_font_height=145,
+                max_font_height=max_font_height,
                 font_path=font_path,
                 role_name=character_name,
                 text_configs_dict=self.text_configs_dict,
@@ -289,6 +290,6 @@ class ImageProcessor:
         self.background_cache.clear()
         self.character_cache.clear()
         self.base_image_cache.clear()
-        self.font_cache.clear()
+        # self.font_cache.clear()
         self.current_base_image = None
         self.current_base_key = None
