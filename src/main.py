@@ -1,14 +1,13 @@
-import time
 import psutil
 from pynput.keyboard import GlobalHotKeys
 import os
 from sys import platform
-from PIL import Image
 
 from rich import print
 
 from config_loader import ConfigLoader
 from image_generator import ImageGenerator
+from image_generator import BG_CNT
 from clipboard_handler import ClipboardHandler
 from drawutils import draw_text_auto, paste_image_auto
 
@@ -106,7 +105,7 @@ class ManosabaTextBox:
         """获取当前角色的表情数量"""
         return self.mahoshojo[self.get_character()]["emotion_count"]
 
-    def delete(self, folder_path: str = None) -> None:
+    def delete(self) -> None:
         """删除缓存文件夹中的所有jpg文件"""
         self.img_generator.delete_cache()
 
@@ -226,7 +225,7 @@ class ManosabaTextBox:
         self.clipboard_handler.copy_png_bytes_to_clipboard(png_bytes)
         self.clipboard_handler.paste_and_send(self.AUTO_PASTE_IMAGE, self.AUTO_SEND_IMAGE)
 
-        return (f"生成成功！角色: {character_name}, 表情: {1 + (self.value_1 // 16)}，"
+        return (f"生成成功！角色: {character_name}, 表情: {1 + (self.value_1 // BG_CNT)}，"
                 f"内容：{'[图片]' if image else text[:20]}{'...' if len(text) > 20 else ''}")
 
     def toggle_active(self):
