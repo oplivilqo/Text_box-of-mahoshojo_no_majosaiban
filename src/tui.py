@@ -126,22 +126,19 @@ class ManosabaTUI(App):
         self.load_character_images(char_name)
 
     def load_character_images(self, char_name: str) -> None:
-        """在后台线程中加载角色图片"""
+        """在后台线程中加载角色图片（内存模式：仅预加载，不生成磁盘缓存）"""
 
         def load_in_thread():
-            def update_progress(current: int, total: int):
-                self.call_from_thread(self._update_progress, current, total)
-
             # 禁用选择框
             self.call_from_thread(self._disable_radio_sets)
 
-            self.call_from_thread(self._show_progress_bar)
             self.call_from_thread(self.update_status,
                                   f"正在加载角色 {self.textbox.get_character(self.current_character, full_name=True)} ...")
 
-            self.textbox.generate_and_save_images(char_name, update_progress)
+            # 内存模式：只需确保角色表情加载到内存
+            emotion_cnt = self.textbox.mahoshojo[char_name]["emotion_count"]
+            self.textbox.img_generator._ensure_character_loaded(char_name, emotion_cnt)
 
-            self.call_from_thread(self._hide_progress_bar)
             self.call_from_thread(self.update_status,
                                   f"角色 {self.textbox.get_character(self.current_character, full_name=True)} 加载完成 ✓")
 
@@ -282,10 +279,21 @@ class ManosabaTUI(App):
         self.update_status(result)
 
     def action_delete_cache(self) -> None:
-        """清除缓存"""
+        """清除缓存（包括内存和磁盘）"""
         self.update_status("正在清除缓存...")
+
+        # 清除内存缓存
+        self.textbox.img_generator.clear_memory_cache()
+
+        # 清除磁盘缓存
         self.textbox.delete()
-        self.update_status("缓存已清除，需要重新加载角色")
+
+        cache_info = self.textbox.img_generator.get_cache_info()
+        self.update_status(f"缓存已清除 (内存: {cache_info['chars_cnt']}角色, 背景: {cache_info['bg_cached']}张)")
+
+        # 重新加载当前角色
+        char_name = self.textbox.get_character(self.current_character)
+        self.load_character_images(char_name)
 
     def action_quit(self) -> None:
         """退出应用"""

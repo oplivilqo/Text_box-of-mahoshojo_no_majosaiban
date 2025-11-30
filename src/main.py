@@ -109,13 +109,21 @@ class ManosabaTextBox:
         """删除缓存文件夹中的所有jpg文件"""
         self.img_generator.delete_cache()
 
+    def get_cache_info(self) -> dict:
+        """获取缓存信息"""
+        return self.img_generator.get_cache_info()
+
+    def clear_memory_cache(self) -> None:
+        """清空内存缓存"""
+        self.img_generator.clear_memory_cache()
+
     def generate_and_save_images(self, character_name: str, progress_callback=None) -> None:
         """生成并保存指定角色的所有表情图片"""
         emotion_cnt = self.mahoshojo[character_name]["emotion_count"]
         self.img_generator.generate_and_save_images(character_name, emotion_cnt, progress_callback)
 
     def get_random_value(self) -> str:
-        """随机获取表情图片名称"""
+        """随机获取表情图片名称（已弃用，保留兼容性）"""
         character_name = self.get_character()
         emotion_cnt = self.get_current_emotion_count()
 
@@ -124,6 +132,17 @@ class ManosabaTextBox:
         )
         self.emote = None
         return img_name
+
+    def get_random_image(self):
+        """随机获取表情图片（内存模式）"""
+        character_name = self.get_character()
+        emotion_cnt = self.get_current_emotion_count()
+
+        img, self.value_1 = self.img_generator.get_random_image(
+            character_name, emotion_cnt, self.emote, self.value_1
+        )
+        self.emote = None
+        return img
 
     def _active_process_allowed(self) -> bool:
         """校验当前前台进程是否在白名单"""
@@ -167,8 +186,9 @@ class ManosabaTextBox:
         if not self._active_process_allowed():
             return "前台应用不在白名单内"
         character_name = self.get_character()
-        address = os.path.join(self.CACHE_PATH, self.get_random_value() + ".jpg")
-        baseimage_file = address
+
+        # 使用内存模式获取图片（不再依赖磁盘缓存）
+        baseimage = self.get_random_image()
 
         text_box_topleft = (self.BOX_RECT[0][0], self.BOX_RECT[0][1])
         image_box_bottomright = (self.BOX_RECT[1][0], self.BOX_RECT[1][1])
@@ -183,7 +203,7 @@ class ManosabaTextBox:
         if image is not None:
             try:
                 png_bytes = paste_image_auto(
-                    img_src=baseimage_file,
+                    img_src=baseimage,
                     top_left=text_box_topleft,
                     bottom_right=image_box_bottomright,
                     content_img=image,
@@ -202,7 +222,7 @@ class ManosabaTextBox:
         elif text is not None and text != "":
             try:
                 png_bytes = draw_text_auto(
-                    img_src=baseimage_file,
+                    img_src=baseimage,
                     top_left=text_box_topleft,
                     bottom_right=image_box_bottomright,
                     text=text,
