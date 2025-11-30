@@ -284,7 +284,7 @@ class ManosabaTUI(App):
     def action_delete_cache(self) -> None:
         """清除缓存"""
         self.update_status("正在清除缓存...")
-        self.textbox.delete(self.textbox.CACHE_PATH)
+        self.textbox.delete()
         self.update_status("缓存已清除，需要重新加载角色")
 
     def action_quit(self) -> None:
