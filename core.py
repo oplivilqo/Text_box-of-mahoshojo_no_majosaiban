@@ -62,29 +62,113 @@ class ManosabaCore:
         # GUI设置
         self.gui_settings = self.config_loader.load_gui_settings()
 
-        # 初始化情感分析器 - 异步方式
+
+        # 初始化情感分析器 - 不在这里初始化，等待特定时机
         self.sentiment_analyzer = SentimentAnalyzer()
         self.sentiment_analyzer_initialized = False
+        self.current_ai_config = {}  # 记录当前AI配置
+        self.gui_callback = None  # 新增：用于通知GUI状态变化的回调函数
         
-        # 只有在启用情感匹配时才初始化
+        # 程序启动时检查是否需要初始化
         sentiment_settings = self.gui_settings.get("sentiment_matching", {})
         if sentiment_settings.get("enabled", False):
             self._initialize_sentiment_analyzer_async()
+
+    def set_gui_callback(self, callback):
+        """设置GUI回调函数，用于通知状态变化"""
+        self.gui_callback = callback
+
+    def _notify_gui_status_change(self, initialized: bool, enabled: bool = None):
+        """通知GUI状态变化"""
+        if self.gui_callback:
+            if enabled is None:
+                # 如果没有指定enabled，则使用当前设置
+                sentiment_settings = self.gui_settings.get("sentiment_matching", {})
+                enabled = sentiment_settings.get("enabled", False) and initialized
+            self.gui_callback(initialized, enabled)
 
     def _initialize_sentiment_analyzer_async(self):
         """异步初始化情感分析器"""
         def init_task():
             try:
-                self._initialize_sentiment_analyzer()
-                self.sentiment_analyzer_initialized = True
-                print("情感分析器初始化完成")
+                sentiment_settings = self.gui_settings.get("sentiment_matching", {})
+                if sentiment_settings.get("enabled", False):
+                    client_type = sentiment_settings.get("ai_model", "ollama")
+                    model_configs = sentiment_settings.get("model_configs", {})
+                    config = model_configs.get(client_type, {})
+                    
+                    # 记录当前配置
+                    self.current_ai_config = {
+                        'client_type': client_type,
+                        'config': config.copy()
+                    }
+                    
+                    success = self.sentiment_analyzer.initialize(client_type, config)
+                    
+                    if success:
+                        print("情感分析器初始化完成")
+                        self.sentiment_analyzer_initialized = True
+                        # 通知GUI初始化成功
+                        self._notify_gui_status_change(True, True)
+                    else:
+                        print("情感分析器初始化失败")
+                        self.sentiment_analyzer_initialized = False
+                        # 通知GUI初始化失败，需要禁用情感匹配
+                        self._notify_gui_status_change(False, False)
+                        # 更新设置，禁用情感匹配
+                        self._disable_sentiment_matching()
+                else:
+                    print("情感匹配功能未启用，跳过初始化")
+                    self.sentiment_analyzer_initialized = False
+                    self._notify_gui_status_change(False, False)
+                    
             except Exception as e:
                 print(f"情感分析器初始化失败: {e}")
                 self.sentiment_analyzer_initialized = False
+                # 通知GUI初始化失败，需要禁用情感匹配
+                self._notify_gui_status_change(False, False)
+                # 更新设置，禁用情感匹配
+                self._disable_sentiment_matching()
         
         # 在后台线程中初始化
         init_thread = threading.Thread(target=init_task, daemon=True)
         init_thread.start()
+
+    def _disable_sentiment_matching(self):
+        """禁用情感匹配设置"""
+        if "sentiment_matching" in self.gui_settings:
+            self.gui_settings["sentiment_matching"]["enabled"] = False
+        # 保存设置
+        self.config_loader.save_gui_settings(self.gui_settings)
+
+    def _reinitialize_sentiment_analyzer_if_needed(self):
+        """检查配置是否有变化，如果有变化则重新初始化"""
+        sentiment_settings = self.gui_settings.get("sentiment_matching", {})
+        if not sentiment_settings.get("enabled", False):
+            # 如果功能被禁用，重置状态
+            if self.sentiment_analyzer_initialized:
+                self.sentiment_analyzer_initialized = False
+                print("情感匹配已禁用，重置分析器状态")
+                self._notify_gui_status_change(False, False)
+            return
+        
+        client_type = sentiment_settings.get("ai_model", "ollama")
+        model_configs = sentiment_settings.get("model_configs", {})
+        config = model_configs.get(client_type, {})
+        
+        new_config = {
+            'client_type': client_type,
+            'config': config.copy()
+        }
+        
+        # 检查配置是否有变化
+        if new_config != self.current_ai_config:
+            print("AI配置已更改，重新初始化情感分析器")
+            self.sentiment_analyzer_initialized = False
+            self.current_ai_config = new_config
+            # 通知GUI开始重新初始化
+            self._notify_gui_status_change(False, False)
+            self._initialize_sentiment_analyzer_async()
 
     def get_ai_models(self) -> Dict[str, Dict[str, Any]]:
         """获取可用的AI模型配置"""
@@ -95,23 +179,42 @@ class ManosabaCore:
                 "base_url": "http://localhost:11434/v1/",
                 "api_key": "",
                 "model": "qwen2.5",
-                "description": "本地运行的Ollama服务"
+                "description": "本地运行的ai模型"
             },
             "deepseek": {
                 "name": "DeepSeek", 
                 "base_url": "https://api.deepseek.com",
                 "api_key": "",
                 "model": "deepseek-chat",
-                "description": "DeepSeek在线API"
+                "description": "DeepSeek线上模型"
             }
         }
 
+
     def test_ai_connection(self, client_type: str, config: Dict[str, Any]) -> bool:
-        """测试AI连接"""
+        """测试AI连接 - 这会进行模型初始化"""
         try:
-            return self.sentiment_analyzer.test_connection(client_type, config)
+            # 使用临时分析器进行测试，不影响主分析器状态
+            temp_analyzer = SentimentAnalyzer()
+            success = temp_analyzer.initialize(client_type, config)
+            if success:
+                print(f"AI连接测试成功: {client_type}")
+                # 如果测试成功，可以更新主分析器
+                self.sentiment_analyzer.initialize(client_type, config)
+                self.sentiment_analyzer_initialized = True
+                # 通知GUI测试成功
+                self._notify_gui_status_change(True, True)
+            else:
+                print(f"AI连接测试失败: {client_type}")
+                self.sentiment_analyzer_initialized = False
+                # 通知GUI测试失败
+                self._notify_gui_status_change(False, False)
+            return success
         except Exception as e:
             print(f"连接测试失败: {e}")
+            self.sentiment_analyzer_initialized = False
+            # 通知GUI测试失败
+            self._notify_gui_status_change(False, False)
             return False
 
     def _initialize_sentiment_analyzer(self):
