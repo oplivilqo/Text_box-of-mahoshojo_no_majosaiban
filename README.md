@@ -1,8 +1,8 @@
+**【注意: `main`分支当前处于不可用状态，请在下方[选择分支](#分支指引)】**
+
 # 🎭魔法少女的魔女裁判 文本框生成器
 
 一个基于Python的自动化表情包生成工具，能够快速生成带有自定义文本的魔法少女的魔女裁判文本框图片。[灵感来源与代码参考](https://github.com/MarkCup-Official/Anan-s-Sketchbook-Chat-Box)
-
-【**注意:** `main`分支当前处于不可用状态，请在下方[选择分支](#分支指引)】
 
 ## 预览
 <img width="600" height="195" alt="5f10f4239bc8a82812e505fd0c4f5567" src="https://github.com/user-attachments/assets/6fb46a8d-4fc4-4d10-80a0-ed21fbb428bf" /><img width="600" height="195" alt="96038673678af657e937d20617322e81" src="https://github.com/user-attachments/assets/847c331e-9274-4b60-9b42-af0a80265391" />
@@ -18,7 +18,10 @@
    - 纯命令行界面，监听全局快捷键的古早版本，「但是没bug」。
 3. **tkinter GUI** (现在还没合并但未来可期)
    - 简单易用的用户界面，同时带有预览。适合大多数用户。
-   - 目前有三位老师正在爆肝，请见PR [#32](https://github.com/oplivilqo/manosaba_text_box/pull/32), [#23](https://github.com/oplivilqo/manosaba_text_box/pull/23), [#41](https://github.com/oplivilqo/manosaba_text_box/pull/41)
+   - 目前有三位老师正在爆肝：
+      1. @YangQwQ _[PR #41](https://github.com/oplivilqo/manosaba_text_box/pull/41)_: [仓库地址](https://github.com/YangQwQ/Text_box-of-mahoushoujo_no_majosaiban-GUI) (已发布Release)
+      2. @morpheus315 _[PR #32](https://github.com/oplivilqo/manosaba_text_box/pull/32)_: [仓库地址](https://github.com/morpheus315/Text_box-of-mahoushoujo_no_majosaiban-NEO) (已发布Release)
+      3. @thgg678 _[PR #23](https://github.com/oplivilqo/manosaba_text_box/pull/23)_: [仓库地址](https://github.com/thgg678/Text_box-of-mahoushoujo_no_majosaiban)
 4. **[textual TUI](https://github.com/oplivilqo/manosaba_text_box/tree/refresh)**: `refresh`分支(比较新) 或 _`main`分支(当前分支)_
    - 直接在运行终端展示的用户界面，适合少数喜欢终端UI的用户。但暂时无法实现图片预览。
    ![TUI界面截图](https://github.com/user-attachments/assets/5d1219c4-582f-4573-a605-065d6abc5337)
@@ -103,6 +106,7 @@ warden:
 <div align="right">
   
 ### 以上. 柊回文————2025.11.15
+
 
 
 
