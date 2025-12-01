@@ -15,6 +15,9 @@ if not exist ".venv" (
             echo 错误：uv 安装失败。
             exit /b 2
         )
+        echo uv 安装成功。
+        echo 请重新运行此脚本，以刷新环境变量。
+        exit /b 0
     ) else (
         echo uv 已安装。
     )
