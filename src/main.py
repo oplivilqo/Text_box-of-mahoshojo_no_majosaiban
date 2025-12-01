@@ -184,7 +184,7 @@ class ManosabaTextBox:
     def start(self) -> str:
         """生成并发送图片，返回状态消息"""
         if not self.active:
-            return "程序处于暂停状态，无法生成图片"
+            return "程序处于暂停状态"
         if not self._active_process_allowed():
             return "前台应用不在白名单内"
         character_name = self.get_character()
@@ -309,10 +309,6 @@ class ManosabaTextBox:
   {self.keymap['quit']}: 退出程序
   {self.keymap['pause']}: 暂停/激活程序
   {self.keymap['delete_cache']}: 清除缓存图片
-      
-程序说明：
-这个版本的程序占用体积较小，但是需要预加载，初次更换角色后需要等待数秒才能正常使用，望周知（
-按Tab可清除生成图片，降低占用空间，但清除图片后需重启才能正常使用
 感谢各位的支持""")
         self.setup_global_hotkeys()
 
