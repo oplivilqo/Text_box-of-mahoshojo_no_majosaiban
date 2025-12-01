@@ -9,7 +9,7 @@ from config_loader import ConfigLoader
 from image_generator import ImageGenerator
 from image_generator import BG_CNT
 from clipboard_handler import ClipboardHandler
-from drawutils import draw_text_auto, paste_image_auto
+from drawutils import draw_text, draw_image
 
 PLATFORM = platform.lower()
 
@@ -204,7 +204,7 @@ class ManosabaTextBox:
 
         if image is not None:
             try:
-                png_bytes = paste_image_auto(
+                png_bytes = draw_image(
                     img_src=baseimage,
                     top_left=text_box_topleft,
                     bottom_right=image_box_bottomright,
@@ -223,7 +223,7 @@ class ManosabaTextBox:
 
         elif text is not None and text != "":
             try:
-                png_bytes = draw_text_auto(
+                png_bytes = draw_text(
                     img_src=baseimage,
                     top_left=text_box_topleft,
                     bottom_right=image_box_bottomright,

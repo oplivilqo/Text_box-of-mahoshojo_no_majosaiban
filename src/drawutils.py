@@ -7,8 +7,8 @@ Align = Literal["left", "center", "right"]
 VAlign = Literal["top", "middle", "bottom"]
 
 IMG_SETTINGS = {
-    "max_width": 1200,
-    "max_height": 800,
+    "max_width": 900,
+    "max_height": 600,
     "quality": 65,
     "resize_ratio": 0.7
 }
@@ -30,7 +30,7 @@ def compress_image(img: Image.Image) -> Image.Image:
 
     return img.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
-def draw_text_auto(
+def draw_text(
     img_src: Union[str, Image.Image],
     top_left: Tuple[int, int],
     bottom_right: Tuple[int, int],
@@ -143,7 +143,6 @@ def draw_text_auto(
         font = _load_font(1)
         best_lines = wrap_lines(text, font, region_w)
         _, best_block_h, best_line_h = 0, 1, 1
-        best_size = 1
     else:
         font = _load_font(best_size)
 
@@ -204,8 +203,7 @@ def draw_text_auto(
             font_color = tuple(cfg["font_color"])
             font_size = cfg["font_size"]
 
-            font_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'fonts', "font3.ttf")
-            font = ImageFont.truetype(font_file, font_size)
+            font = _load_font(font_size)
 
             shadow_pos = (pos[0] + shadow_offset[0], pos[1] + shadow_offset[1])
             draw.text(shadow_pos, txt, fill=shadow_color, font=font)
@@ -218,7 +216,7 @@ def draw_text_auto(
     img.save(buf, format="PNG")
     return buf.getvalue()
 
-def paste_image_auto(
+def draw_image(
     img_src: Union[str, Image.Image],
     top_left: Tuple[int, int],
     bottom_right: Tuple[int, int],
@@ -229,9 +227,7 @@ def paste_image_auto(
     allow_upscale: bool = False,
     keep_alpha: bool = True,
     img_overlay: Union[str, Image.Image, None] = None,
-    max_img_size: Tuple[int | None, int | None] = (None, None),
-    role_name: str = "unknown",
-    text_cfgs: dict | None = None,
+    max_img_size: Tuple[int | None, int | None] = (None, None)
 ) -> bytes:
     """
     在指定矩形内放置图片，按比例缩放至最大但不超过该矩形
@@ -299,23 +295,7 @@ def paste_image_auto(
     if overlay is not None:
         img.paste(overlay, (0, 0), overlay)
 
-    # 绘制角色专属文字
-    if text_cfgs and role_name in text_cfgs:
-        shadow_offset = (2, 2)
-        shadow_color = (0, 0, 0)
-
-        for cfg in text_cfgs[role_name]:
-            txt = cfg["text"]
-            pos = tuple(cfg["position"])
-            font_color = tuple(cfg["font_color"])
-            font_size = cfg["font_size"]
-
-            font_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'fonts', "font3.ttf")
-            font = ImageFont.truetype(font_file, font_size)
-
-            shadow_pos = (pos[0] + shadow_offset[0], pos[1] + shadow_offset[1])
-            draw.text(shadow_pos, txt, fill=shadow_color, font=font)
-            draw.text((pos[0], pos[1]), txt, fill=font_color, font=font)
+    img = compress_image(img)
 
     # 输出 PNG
     buf = BytesIO()
