@@ -50,26 +50,32 @@ class ImageGenerator:
             self._bg_cache.append(bg_img)
 
     def _load_character_emotions(self, character_name: str, emotion_cnt: int) -> list[Image.Image]:
-        """加载指定角色的所有表情到内存"""
+        """加载指定角色的所有表情到内存（扫描文件夹下所有PNG/JPG/JPEG图片）"""
+        char_dir = os.path.join(self.base_path, 'assets', 'chara', character_name)
+
+        if not os.path.exists(char_dir):
+            raise FileNotFoundError(f"角色文件夹不存在: {char_dir}")
+
+        # 扫描文件夹下所有图片文件
+        image_files = []
+        for filename in sorted(os.listdir(char_dir)):
+            lower_name = filename.lower()
+            if lower_name.endswith(('.png', '.jpg', '.jpeg')):
+                image_files.append(os.path.join(char_dir, filename))
+
+        if not image_files:
+            raise FileNotFoundError(
+                f"角色文件夹 {character_name} 中未找到任何PNG/JPG/JPEG图片"
+            )
+
+        # 如果指定了emotion_cnt，只加载前N张；否则加载所有
+        files_to_load = image_files[:emotion_cnt] if emotion_cnt > 0 else image_files
+
         emotions = []
-        for j in range(emotion_cnt):
-            avatar_path = None
-            for ext in ['.png', '.jpg', '.jpeg']:
-                candidate = os.path.join(
-                    self.base_path, 'assets', 'chara', character_name,
-                    f"{character_name} ({j + 1}){ext}"
-                )
-                if os.path.exists(candidate):
-                    avatar_path = candidate
-                    break
-
-            if avatar_path is None:
-                raise FileNotFoundError(
-                    f"找不到角色 {character_name} 的表情 {j + 1} 图片文件（支持PNG/JPG/JPEG格式）"
-                )
-
+        for avatar_path in files_to_load:
             avatar = self.fit_image(Image.open(avatar_path).convert("RGBA"))
             emotions.append(avatar)
+
         return emotions
 
     def _ensure_character_loaded(self, character_name: str, emotion_cnt: int) -> None:

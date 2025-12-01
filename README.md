@@ -131,12 +131,9 @@ python main. py
 #### 添加
 ##### 第1步
 在`<根目录>/assets/chara/`文件夹中创建一个以角色名命名的文件夹，
-如`warden`，然后将角色的所有表情图片放置于该文件夹中，
-并统一命名格式为`<角色名> (<差分编号>)`，如图：
+如`warden`，然后将角色的所有表情图片放置于该文件夹中，如图：
 
 <img width="230" height="308" alt="image" src="https://github.com/user-attachments/assets/892b6c8e-b857-482b-94be-07ad240f2a3b" />
-
-> 注意角色名与编号之间的空格
 
 ##### 第2步
 在角色文件夹中新建配置文件`meta.yml`，格式如下：
