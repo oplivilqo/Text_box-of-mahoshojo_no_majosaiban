@@ -35,7 +35,7 @@ function initBackgrounds() {
 
     for (const [key, value] of Object.entries(backgrounds)) {
         let bg_html = `
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-sm-3 col-md-2">
             <label class="form-imagecheck mb-2">
                 <input name="background" type="radio" value="${key}" class="form-imagecheck-input" onchange="updateCanvas()" onclick="updateCanvas()"${key==OPTION_DEFAULTS.background ? " checked" : ""}/>
                 <span class="form-imagecheck-figure" title="${value.name}" data-bs-toggle="tooltip">
