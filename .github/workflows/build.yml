@@ -1,4 +1,4 @@
-name: Build Executables (.exe)
+name: "打包 .exe 程序 - refresh 分支"
 
 on:
   push:
@@ -38,7 +38,7 @@ jobs:
       
       - name: Build tui.exe
         run: |
-          pyinstaller --onefile --name tui src/tui. py
+          pyinstaller --onefile --name tui src/tui.py
       
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
