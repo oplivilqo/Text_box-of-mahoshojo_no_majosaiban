@@ -35,10 +35,24 @@ jobs:
       - name: Build main.exe with resources
         run: |
           pyinstaller --onefile --name main `
-            --add-data "assets;assets" `
-            --add-data "config;config" `
-            --add-data "emoji_png;emoji_png" `
-            --noconsole `
+            --hidden-import "image_fit_paste" `
+            --hidden-import "text_fit_draw" `
+            --add-data "alisa:alisa" `
+            --add-data "anan:anan" `
+            --add-data "background:background" `
+            --add-data "coco:coco" `
+            --add-data "ema:ema" `
+            --add-data "hanna:hanna" `
+            --add-data "hiro:hiro" `
+            --add-data "mago:mago" `
+            --add-data "meruru:meruru" `
+            --add-data "miria:miria" `
+            --add-data "nanoka:nonoka" `
+            --add-data "noa:noa" `
+            --add-data "reia:reia" `
+            --add-data "sherri:sherri" `
+            --add-data "yuki:yuki" `
+            --add-data "font3.ttf:."
             main.py
       
       - name: Upload artifacts
