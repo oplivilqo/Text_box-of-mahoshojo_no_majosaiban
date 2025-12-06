@@ -1,12 +1,6 @@
 name: "构建EXE [legacy怀旧版] (带资源文件)"
 
 on:
-  push:
-      branches:
-        - legacy
-  pull_request:
-    branches:
-      - legacy
   workflow_dispatch:
 
 jobs:
@@ -52,7 +46,7 @@ jobs:
             --add-data "reia:reia" `
             --add-data "sherri:sherri" `
             --add-data "yuki:yuki" `
-            --add-data "font3.ttf:."
+            --add-data "font3.ttf:." `
             main.py
       
       - name: Upload artifacts
