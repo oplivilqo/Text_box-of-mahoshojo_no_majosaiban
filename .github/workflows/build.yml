@@ -1,4 +1,4 @@
-name: "打包 .exe 程序 - refresh 分支"
+name: "构建EXE [refresh尝鲜版]"
 
 on:
   push:
